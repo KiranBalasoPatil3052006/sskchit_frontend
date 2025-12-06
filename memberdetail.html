@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Seetu App - Member Detail</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+<link rel="icon" type="image/png" sizes="180x180" href="images/sskicon.png">
+    <style>
+        /* layout + styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #f5efe6;
+            --bg-gradient: linear-gradient(135deg, #fdf3e7, #f7e4cf);
+            --text: #3a251b;
+            --accent: #d2b89b;
+            --card-bg: #fff7ee;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Arial;
+            background: var(--bg-gradient);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* NAV */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgba(245, 239, 230, 0.96);
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(210, 184, 155, 0.7);
+        }
+
+        .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .brand {
+            font-weight: 800;
+            font-size: 1.1rem;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--text);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-weight: 600;
+            background: transparent;
+            border: 1px solid transparent;
+            transition: transform .12s, background .12s, border-color .12s;
+            font-size: .9rem;
+        }
+
+        .nav-links a:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.85);
+            border-color: rgba(210, 184, 155, 0.9);
+        }
+
+        .nav-links a.active {
+            background: var(--card-bg);
+            border-color: var(--accent);
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .back-link {
+            font-size: .9rem;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .back-link a {
+            color: var(--text);
+            text-decoration: none;
+            opacity: .85
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+            opacity: 1
+        }
+
+        .profile-card {
+            background: radial-gradient(circle at top left, #fff9f2, #f7e4cf);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.06);
+        }
+
+        .avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid rgba(210, 184, 155, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.3rem;
+            color: var(--text);
+        }
+
+        .member-name {
+            font-weight: 700;
+            font-size: 1.2rem;
+            text-align: center
+        }
+
+        .member-tagline {
+            font-size: .85rem;
+            opacity: .8;
+            text-align: center
+        }
+
+        .amount-chip {
+            margin-top: 4px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(58, 37, 27, 0.1);
+            font-size: .8rem;
+            font-weight: 600;
+        }
+
+        .info-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 8px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .info-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 10px 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(210, 184, 155, 0.5);
+        }
+
+        .info-label {
+            font-size: .78rem;
+            text-transform: uppercase;
+            opacity: .75;
+            margin-bottom: 4px
+        }
+
+        .info-value {
+            font-size: .96rem;
+            font-weight: 600
+        }
+
+        .grid-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        .grid-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .grid-caption {
+            font-size: .85rem;
+            opacity: .8
+        }
+
+        .week-grid-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 4px;
+        }
+
+        .week-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 120px);
+            gap: 8px;
+            padding: 8px 6px;
+            min-width: max-content;
+        }
+
+        /* cell layout: two lines inside the cell */
+        .week-cell {
+            width: 120px;
+            height: 56px;
+            border-radius: 8px;
+            border: 1px solid rgba(210, 184, 155, 0.8);
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: transform .08s, box-shadow .12s, background .12s;
+            padding: 6px 4px;
+            gap: 2px;
+        }
+
+        .week-cell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        .cell-week {
+            font-size: .78rem;
+            font-weight: 700;
+            color: rgba(40, 30, 20, 0.85)
+        }
+
+        .cell-date {
+            font-size: .72rem;
+            opacity: .8;
+            color: rgba(40, 30, 20, 0.85)
+        }
+
+        .week-cell.paid {
+            background: linear-gradient(135deg, #ffe0d5, #ffeedf);
+            border-color: rgba(210, 184, 155, 1);
+        }
+
+        .week-cell.paid .cell-week {
+            color: rgba(40, 20, 10, 0.95);
+        }
+
+        .week-cell.paid .cell-date {
+            font-weight: 700;
+            opacity: 1;
+        }
+
+        .week-label-row {
+            font-size: .8rem;
+            opacity: .8;
+            margin-top: 6px;
+        }
+
+        .summary-row {
+            margin-top: 10px;
+            font-size: .88rem;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 40;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 14px;
+            max-width: 380px;
+            width: 92%;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(210, 184, 155, 0.9);
+        }
+
+        .modal-title {
+            font-weight: 700;
+            margin-bottom: 8px
+        }
+
+        .modal-text {
+            opacity: .9;
+            margin-bottom: 12px
+        }
+
+        .btn {
+            border: none;
+            border-radius: 999px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(58, 37, 27, 0.3);
+            color: var(--text);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ffe0d5, #ffeedf);
+            border: 1px solid rgba(210, 184, 155, 1);
+            color: var(--text);
+        }
+
+        @media (max-width: 767px) {
+            .week-grid {
+                grid-template-columns: repeat(4, 82px);
+                gap: 8px;
+            }
+
+            .week-cell {
+                width: 80px;
+                height: 42px;
+                flex-direction: row;
+                gap: 8px;
+                padding: 6px;
+                align-items: center;
+                justify-content: flex-start;
+            }
+
+            .cell-week {
+                font-size: .78rem;
+            }
+
+            .cell-date {
+                font-size: .72rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="navbar">
+        <div class="nav-inner">
+            <div class="brand">Seetu App</div>
+            <nav class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="members.html" class="active">Members</a>
+                <a href="#">Add</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page">
+        <div class="back-link"><a href="javascript:history.back()">&larr; Back</a></div>
+
+        <section class="profile-card">
+            <div class="avatar" id="avatarCircle">M</div>
+            <div style="display:flex;flex-direction:column;align-items:center;width:100%;">
+                <div class="member-name" id="memberName">Member Name</div>
+                <div class="member-tagline" id="memberStatus">Weekly contribution member</div>
+                <div class="amount-chip" id="amountChip">₹0 / week</div>
+
+                <div class="info-row" style="margin-top:10px;">
+                    <div class="info-card">
+                        <div class="info-label">Weekly Amount</div>
+                        <div class="info-value" id="infoAmount">₹0</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Week Start</div>
+                        <div class="info-value" id="infoStart">--</div>
+                    </div>
+                </div>
+
+                <div style="margin-top:10px;">
+                    <button id="cancelPlanBtn" class="btn btn-outline">Cancel Plan (Remove member)</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid-card">
+            <div class="grid-header">
+                <h2>Weekly Payment Status</h2>
+                <div class="grid-caption" id="gridCaption">Tap a week to toggle paid/unpaid.</div>
+            </div>
+
+            <div class="week-grid-wrapper">
+                <div class="week-grid" id="weekGrid"></div>
+            </div>
+
+            <div class="week-label-row" id="weekLabelRow"></div>
+
+            <div class="summary-row">
+                <div>
+                    <div><strong>Weeks Paid:</strong> <span id="summaryPaidWeeks">0</span></div>
+                    <div><strong>Weeks Pending:</strong> <span id="summaryPendingWeeks">0</span></div>
+                </div>
+                <div>
+                    <div><strong>Total Paid:</strong> ₹<span id="summaryPaidAmount">0</span></div>
+                    <div><strong>Remaining:</strong> ₹<span id="summaryPendingAmount">0</span></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-title" id="modalTitle">Confirm</div>
+            <div class="modal-text" id="modalText">Mark <span id="modalWeekLabel">Week 1</span> as paid?</div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button class="btn btn-outline" id="btnCancel">Cancel</button>
+                <button class="btn btn-primary" id="btnConfirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIG
+        const API_BASE = '"https://sskchitbackend.onrender.com/api"';
+        const TOTAL_WEEKS = 52;
+        const SCHEME_START = new Date(2025, 9, 12); // 12 Oct 2025
+
+        // DOM refs
+        const memberNameEl = document.getElementById('memberName');
+        const memberStatusEl = document.getElementById('memberStatus');
+        const amountChipEl = document.getElementById('amountChip');
+        const infoAmountEl = document.getElementById('infoAmount');
+        const infoStartEl = document.getElementById('infoStart');
+        const avatarCircle = document.getElementById('avatarCircle');
+        const weekGridEl = document.getElementById('weekGrid');
+        const weekLabelRow = document.getElementById('weekLabelRow');
+
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalText = document.getElementById('modalText');
+        const modalWeekLabel = document.getElementById('modalWeekLabel');
+        const btnCancel = document.getElementById('btnCancel');
+        const btnConfirm = document.getElementById('btnConfirm');
+
+        const cancelPlanBtn = document.getElementById('cancelPlanBtn');
+
+        let currentMember = null;
+        let selectedWeekIndex = null;
+        const weekDates = [];
+
+        // helpers
+        function getMemberIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('id'); // numeric id or Mongo _id string
+        }
+
+        function formatDate(date) {
+            const d = String(date.getDate()).padStart(2, '0');
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return `${d} ${monthNames[date.getMonth()]}`;
+        }
+
+        function dayName(date) {
+            const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            return days[date.getDay()];
+        }
+
+        function initWeekDates() {
+            for (let i = 0; i < TOTAL_WEEKS; i++) {
+                const d = new Date(SCHEME_START);
+                d.setDate(d.getDate() + 7 * i);
+                weekDates[i] = d;
+            }
+        }
+
+        function normalizePaidWeeks(arr) {
+            const out = new Array(TOTAL_WEEKS).fill(false);
+            if (!Array.isArray(arr)) return out;
+            for (let i = 0; i < Math.min(arr.length, TOTAL_WEEKS); i++) out[i] = Boolean(arr[i]);
+            return out;
+        }
+
+        // API helpers
+        async function apiGetMember(id) {
+            try {
+                const res = await fetch(`${API_BASE}/members/${encodeURIComponent(id)}`);
+                if (!res.ok) throw new Error('member not found');
+                return await res.json();
+            } catch (err) {
+                console.error('apiGetMember error', err);
+                return null;
+            }
+        }
+
+        async function apiUpdateMemberByDoc(docIdentifier, updates) {
+            try {
+                const res = await fetch(`${API_BASE}/members/${encodeURIComponent(docIdentifier)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                if (!res.ok) {
+                    const txt = await res.text().catch(() => '');
+                    throw new Error(txt || 'update failed');
+                }
+                return await res.json();
+            } catch (err) {
+                console.error('apiUpdateMember error', err);
+                throw err;
+            }
+        }
+
+        async function apiDeleteMemberByDoc(docIdentifier) {
+            try {
+                const res = await fetch(`${API_BASE}/members/${encodeURIComponent(docIdentifier)}`, { method: 'DELETE' });
+                if (!res.ok) {
+                    const txt = await res.text().catch(() => '');
+                    throw new Error(txt || 'delete failed');
+                }
+                return await res.json();
+            } catch (err) {
+                console.error('apiDeleteMember error', err);
+                throw err;
+            }
+        }
+
+        // UI render
+        function renderHeader() {
+            if (!currentMember) return;
+            memberNameEl.textContent = currentMember.name || 'Member';
+            amountChipEl.textContent = `₹${currentMember.amount || 0} / week`;
+            infoAmountEl.textContent = `₹${currentMember.amount || 0}`;
+            memberStatusEl.textContent = (currentMember.status === 'active') ? 'Active weekly member' : 'Cancelled member';
+            infoStartEl.textContent = `${formatDate(SCHEME_START)} (${dayName(SCHEME_START)})`;
+            const initials = (currentMember.name || '').split(' ').filter(Boolean).map(s => s[0].toUpperCase()).slice(0, 2).join('');
+            avatarCircle.textContent = initials || 'M';
+        }
+
+        function renderWeekGrid() {
+            weekGridEl.innerHTML = '';
+            if (!currentMember) return;
+            const paid = normalizePaidWeeks(currentMember.paidWeeks);
+
+            for (let i = 0; i < TOTAL_WEEKS; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'week-cell' + (paid[i] ? ' paid' : '');
+                cell.dataset.weekIndex = i;
+
+                // cell contents (two lines)
+                const line1 = document.createElement('div');
+                line1.className = 'cell-week';
+                line1.textContent = `W${i + 1}`;
+
+                const line2 = document.createElement('div');
+                line2.className = 'cell-date';
+                if (paid[i]) {
+                    line2.textContent = 'PAID';
+                } else {
+                    line2.textContent = formatDate(weekDates[i]);
+                }
+
+                cell.appendChild(line1);
+                cell.appendChild(line2);
+
+                cell.title = `Week ${i + 1} - ${formatDate(weekDates[i])}`;
+                cell.addEventListener('click', () => openConfirmForWeek(i));
+                weekGridEl.appendChild(cell);
+            }
+
+            weekLabelRow.textContent = `Start: ${formatDate(SCHEME_START)} (${dayName(SCHEME_START)}), total weeks: ${TOTAL_WEEKS}.`;
+            updateSummaryUI();
+        }
+
+        function updateSummaryUI() {
+            if (!currentMember) return;
+            const paid = normalizePaidWeeks(currentMember.paidWeeks);
+            const paidCount = paid.filter(Boolean).length;
+            const pending = TOTAL_WEEKS - paidCount;
+            const weekly = Number(currentMember.amount || 0);
+            const paidAmount = paidCount * weekly;
+            const pendingAmount = pending * weekly;
+            document.getElementById('summaryPaidWeeks').textContent = paidCount;
+            document.getElementById('summaryPendingWeeks').textContent = pending;
+            document.getElementById('summaryPaidAmount').textContent = paidAmount;
+            document.getElementById('summaryPendingAmount').textContent = pendingAmount;
+        }
+
+        // modal
+        function openConfirmForWeek(index) {
+            selectedWeekIndex = index;
+            const paid = normalizePaidWeeks(currentMember.paidWeeks)[index];
+            modalWeekLabel.textContent = `Week ${index + 1} (${formatDate(weekDates[index])})`;
+            modalText.innerHTML = paid
+                ? `Unmark <strong>${modalWeekLabel.textContent}</strong> as paid?`
+                : `Mark <strong>${modalWeekLabel.textContent}</strong> as paid?`;
+            modalOverlay.classList.add('open');
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove('open');
+            selectedWeekIndex = null;
+        }
+
+        btnCancel.addEventListener('click', () => closeModal());
+
+        btnConfirm.addEventListener('click', async () => {
+            if (selectedWeekIndex === null) { closeModal(); return; }
+            try {
+                const arr = normalizePaidWeeks(currentMember.paidWeeks);
+                arr[selectedWeekIndex] = !arr[selectedWeekIndex]; // toggle
+
+                const identifier = currentMember._id || getMemberIdFromUrl();
+                const updated = await apiUpdateMemberByDoc(identifier, { paidWeeks: arr });
+
+                // use normalized updated value returned by server (if server returns it), else fallback
+                currentMember.paidWeeks = normalizePaidWeeks(updated.paidWeeks ?? arr);
+                renderWeekGrid();
+            } catch (err) {
+                console.error(err);
+                alert('Could not update payment status. See console for details.');
+            } finally {
+                closeModal();
+            }
+        });
+
+        modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+
+        // delete/cancel plan
+        cancelPlanBtn.addEventListener('click', async () => {
+            if (!currentMember) return;
+            if (!confirm(`Remove ${currentMember.name} from records? This will delete the member.`)) return;
+            try {
+                const identifier = currentMember._id || getMemberIdFromUrl();
+                await apiDeleteMemberByDoc(identifier);
+                alert('Member removed.');
+                window.location.href = 'members.html';
+            } catch (err) {
+                console.error(err);
+                alert('Could not remove member. Check console for details.');
+            }
+        });
+
+        // initialization
+        (async function init() {
+            initWeekDates();
+
+            const idParam = getMemberIdFromUrl();
+            if (!idParam) {
+                alert('No member id provided in URL.');
+                window.location.href = 'members.html';
+                return;
+            }
+
+            const fetched = await apiGetMember(idParam);
+            if (!fetched) {
+                alert('Member not found or server error. Make sure backend is running and the id parameter matches a member document.');
+                window.location.href = 'members.html';
+                return;
+            }
+
+            // normalize paidWeeks locally
+            fetched.paidWeeks = normalizePaidWeeks(fetched.paidWeeks);
+            currentMember = fetched;
+
+            // persist normalized array if DB doesn't have length 52 (non-blocking)
+            try {
+                const identifier = currentMember._id || idParam;
+                if (!Array.isArray(fetched.paidWeeks) || fetched.paidWeeks.length !== TOTAL_WEEKS) {
+                    await apiUpdateMemberByDoc(identifier, { paidWeeks: currentMember.paidWeeks });
+                }
+            } catch (e) {
+                console.warn('Could not persist normalized paidWeeks (non-fatal)', e);
+            }
+
+            renderHeader();
+            renderWeekGrid();
+        })();
+    </script>
+</body>
+
+</html>
