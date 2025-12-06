@@ -8,363 +8,57 @@
 
     <link rel="icon" type="image/png" sizes="180x180" href="images/sskicon.png">
     <style>
-        /* layout + styles (unchanged from your original file) */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        :root {
-            --bg: #f5efe6;
-            --bg-gradient: linear-gradient(135deg, #fdf3e7, #f7e4cf);
-            --text: #3a251b;
-            --accent: #d2b89b;
-            --card-bg: #fff7ee;
-        }
-
-        body {
-            font-family: system-ui, -apple-system, "Segoe UI", Arial;
-            background: var(--bg-gradient);
-            color: var(--text);
-            min-height: 100vh;
-        }
-
-        /* NAV */
-        .navbar {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            background: rgba(245, 239, 230, 0.96);
-            padding: 10px 16px;
-            border-bottom: 1px solid rgba(210, 184, 155, 0.7);
-        }
-
-        .nav-inner {
-            max-width: 1100px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .brand {
-            font-weight: 800;
-            font-size: 1.1rem;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            color: var(--text);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: var(--text);
-            padding: 6px 12px;
-            border-radius: 999px;
-            font-weight: 600;
-            background: transparent;
-            border: 1px solid transparent;
-            transition: transform .12s, background .12s, border-color .12s;
-            font-size: .9rem;
-        }
-
-        .nav-links a:hover {
-            transform: translateY(-1px);
-            background: rgba(255, 255, 255, 0.85);
-            border-color: rgba(210, 184, 155, 0.9);
-        }
-
-        .nav-links a.active {
-            background: var(--card-bg);
-            border-color: var(--accent);
-        }
-
-        .page {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 16px;
-        }
-
-        .back-link {
-            font-size: .9rem;
-            margin-bottom: 8px;
-            color: var(--text);
-        }
-
-        .back-link a {
-            color: var(--text);
-            text-decoration: none;
-            opacity: .85
-        }
-
-        .back-link a:hover {
-            text-decoration: underline;
-            opacity: 1
-        }
-
-        .profile-card {
-            background: radial-gradient(circle at top left, #fff9f2, #f7e4cf);
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 16px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.06);
-        }
-
-        .avatar {
-            width: 70px;
-            height: 70px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 2px solid rgba(210, 184, 155, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.3rem;
-            color: var(--text);
-        }
-
-        .member-name {
-            font-weight: 700;
-            font-size: 1.2rem;
-            text-align: center
-        }
-
-        .member-tagline {
-            font-size: .85rem;
-            opacity: .8;
-            text-align: center
-        }
-
-        .amount-chip {
-            margin-top: 4px;
-            padding: 4px 10px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(58, 37, 27, 0.1);
-            font-size: .8rem;
-            font-weight: 600;
-        }
-
-        .info-row {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-top: 8px;
-            width: 100%;
-            max-width: 420px;
-        }
-
-        .info-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 10px 12px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(210, 184, 155, 0.5);
-        }
-
-        .info-label {
-            font-size: .78rem;
-            text-transform: uppercase;
-            opacity: .75;
-            margin-bottom: 4px
-        }
-
-        .info-value {
-            font-size: .96rem;
-            font-weight: 600
-        }
-
-        .grid-card {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 12px;
-            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
-            margin-top: 6px;
-            overflow: hidden;
-        }
-
-        .grid-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .grid-caption {
-            font-size: .85rem;
-            opacity: .8
-        }
-
-        .week-grid-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 4px;
-        }
-
-        .week-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 120px);
-            gap: 8px;
-            padding: 8px 6px;
-            min-width: max-content;
-        }
-
-        /* cell layout: two lines inside the cell */
-        .week-cell {
-            width: 120px;
-            height: 56px;
-            border-radius: 8px;
-            border: 1px solid rgba(210, 184, 155, 0.8);
-            background: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            user-select: none;
-            transition: transform .08s, box-shadow .12s, background .12s;
-            padding: 6px 4px;
-            gap: 2px;
-        }
-
-        .week-cell:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
-        }
-
-        .cell-week {
-            font-size: .78rem;
-            font-weight: 700;
-            color: rgba(40, 30, 20, 0.85)
-        }
-
-        .cell-date {
-            font-size: .72rem;
-            opacity: .8;
-            color: rgba(40, 30, 20, 0.85)
-        }
-
-        .week-cell.paid {
-            background: linear-gradient(135deg, #ffe0d5, #ffeedf);
-            border-color: rgba(210, 184, 155, 1);
-        }
-
-        .week-cell.paid .cell-week {
-            color: rgba(40, 20, 10, 0.95);
-        }
-
-        .week-cell.paid .cell-date {
-            font-weight: 700;
-            opacity: 1;
-        }
-
-        .week-label-row {
-            font-size: .8rem;
-            opacity: .8;
-            margin-top: 6px;
-        }
-
-        .summary-row {
-            margin-top: 10px;
-            font-size: .88rem;
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        /* modal */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.35);
-            z-index: 40;
-        }
-
-        .modal-overlay.open {
-            display: flex;
-        }
-
-        .modal {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 14px;
-            max-width: 380px;
-            width: 92%;
-            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(210, 184, 155, 0.9);
-        }
-
-        .modal-title {
-            font-weight: 700;
-            margin-bottom: 8px
-        }
-
-        .modal-text {
-            opacity: .9;
-            margin-bottom: 12px
-        }
-
-        .btn {
-            border: none;
-            border-radius: 999px;
-            padding: 6px 12px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 1px solid rgba(58, 37, 27, 0.3);
-            color: var(--text);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #ffe0d5, #ffeedf);
-            border: 1px solid rgba(210, 184, 155, 1);
-            color: var(--text);
-        }
-
-        @media (max-width: 767px) {
-            .week-grid {
-                grid-template-columns: repeat(4, 82px);
-                gap: 8px;
-            }
-
-            .week-cell {
-                width: 80px;
-                height: 42px;
-                flex-direction: row;
-                gap: 8px;
-                padding: 6px;
-                align-items: center;
-                justify-content: flex-start;
-            }
-
-            .cell-week {
-                font-size: .78rem;
-            }
-
-            .cell-date {
-                font-size: .72rem;
-            }
+        /* (styles unchanged from your original file) */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --bg:#f5efe6; --bg-gradient: linear-gradient(135deg,#fdf3e7,#f7e4cf); --text:#3a251b; --accent:#d2b89b; --card-bg:#fff7ee; }
+        body { font-family: system-ui, -apple-system, "Segoe UI", Arial; background: var(--bg-gradient); color: var(--text); min-height: 100vh; }
+        .navbar { position: sticky; top: 0; z-index: 20; background: rgba(245,239,230,0.96); padding: 10px 16px; border-bottom: 1px solid rgba(210,184,155,0.7); }
+        .nav-inner { max-width: 1100px; margin: 0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .brand { font-weight:800; font-size:1.1rem; letter-spacing:.08em; text-transform:uppercase; color:var(--text); }
+        .nav-links { display:flex; gap:10px; align-items:center; }
+        .nav-links a { text-decoration:none; color:var(--text); padding:6px 12px; border-radius:999px; font-weight:600; background:transparent; border:1px solid transparent; transition: transform .12s, background .12s, border-color .12s; font-size:.9rem; }
+        .nav-links a:hover { transform:translateY(-1px); background:rgba(255,255,255,0.85); border-color:rgba(210,184,155,0.9); }
+        .nav-links a.active { background:var(--card-bg); border-color:var(--accent); }
+        .page { max-width:1100px; margin:0 auto; padding:16px; }
+        .back-link { font-size:.9rem; margin-bottom:8px; color:var(--text); }
+        .back-link a { color:var(--text); text-decoration:none; opacity:.85 }
+        .back-link a:hover { text-decoration:underline; opacity:1 }
+        .profile-card { background: radial-gradient(circle at top left,#fff9f2,#f7e4cf); border-radius:16px; padding:18px; margin-bottom:16px; display:flex; flex-direction:column; align-items:center; gap:10px; box-shadow:0 14px 30px rgba(0,0,0,.06); }
+        .avatar { width:70px; height:70px; border-radius:999px; background:rgba(255,255,255,0.9); border:2px solid rgba(210,184,155,0.9); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.3rem; color:var(--text); }
+        .member-name { font-weight:700; font-size:1.2rem; text-align:center }
+        .member-tagline { font-size:.85rem; opacity:.8; text-align:center }
+        .amount-chip { margin-top:4px; padding:4px 10px; border-radius:999px; background:rgba(255,255,255,0.6); border:1px solid rgba(58,37,27,0.1); font-size:.8rem; font-weight:600; }
+        .info-row { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:8px; width:100%; max-width:420px; }
+        .info-card { background:var(--card-bg); border-radius:12px; padding:10px 12px; box-shadow:0 8px 20px rgba(0,0,0,0.05); border:1px solid rgba(210,184,155,0.5); }
+        .info-label { font-size:.78rem; text-transform:uppercase; opacity:.75; margin-bottom:4px }
+        .info-value { font-size:.96rem; font-weight:600 }
+        .grid-card { background:var(--card-bg); border-radius:16px; padding:12px; box-shadow:0 10px 24px rgba(0,0,0,0.06); margin-top:6px; overflow:hidden; }
+        .grid-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px; flex-wrap:wrap; }
+        .grid-caption { font-size:.85rem; opacity:.8 }
+        .week-grid-wrapper { overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px; }
+        .week-grid { display:grid; grid-template-columns: repeat(6, 120px); gap:8px; padding:8px 6px; min-width: max-content; }
+        .week-cell { width:120px; height:56px; border-radius:8px; border:1px solid rgba(210,184,155,0.8); background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; user-select:none; transition: transform .08s, box-shadow .12s, background .12s; padding:6px 4px; gap:2px; }
+        .week-cell:hover { transform:translateY(-2px); box-shadow:0 6px 14px rgba(0,0,0,0.08); }
+        .cell-week { font-size:.78rem; font-weight:700; color:rgba(40,30,20,0.85) }
+        .cell-date { font-size:.72rem; opacity:.8; color:rgba(40,30,20,0.85) }
+        .week-cell.paid { background: linear-gradient(135deg,#ffe0d5,#ffeedf); border-color:rgba(210,184,155,1); }
+        .week-cell.paid .cell-week { color:rgba(40,20,10,0.95); }
+        .week-cell.paid .cell-date { font-weight:700; opacity:1; }
+        .week-label-row { font-size:.8rem; opacity:.8; margin-top:6px; }
+        .summary-row { margin-top:10px; font-size:.88rem; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .modal-overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.35); z-index:40; }
+        .modal-overlay.open { display:flex; }
+        .modal { background:var(--card-bg); border-radius:12px; padding:14px; max-width:380px; width:92%; box-shadow:0 14px 30px rgba(0,0,0,0.2); border:1px solid rgba(210,184,155,0.9); }
+        .modal-title { font-weight:700; margin-bottom:8px }
+        .modal-text { opacity:.9; margin-bottom:12px }
+        .btn { border:none; border-radius:999px; padding:6px 12px; cursor:pointer; font-weight:600; }
+        .btn-outline { background:transparent; border:1px solid rgba(58,37,27,0.3); color:var(--text); }
+        .btn-primary { background: linear-gradient(135deg,#ffe0d5,#ffeedf); border:1px solid rgba(210,184,155,1); color:var(--text); }
+        @media (max-width:767px) {
+            .week-grid { grid-template-columns: repeat(4,82px); gap:8px; }
+            .week-cell { width:80px; height:42px; flex-direction:row; gap:8px; padding:6px; align-items:center; justify-content:flex-start; }
+            .cell-week { font-size:.78rem; }
+            .cell-date { font-size:.72rem; }
         }
     </style>
 </head>
@@ -411,7 +105,7 @@
         <section class="grid-card">
             <div class="grid-header">
                 <h2>Weekly Payment Status</h2>
-                <div class="grid-caption" id="gridCaption">Tap a week to toggle paid/unpaid.</div>
+                <div class="grid-caption" id="gridCaption">Tap a week to mark it <strong>paid</strong> or <strong>unpaid</strong>.</div>
             </div>
 
             <div class="week-grid-wrapper">
@@ -434,32 +128,33 @@
     </main>
 
     <!-- Modal -->
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal">
-            <div class="modal-title" id="modalTitle">Confirm</div>
+    <div class="modal-overlay" id="modalOverlay" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="modal" role="document">
+            <div class="modal-title" id="modalTitle">Confirm Payment</div>
             <div class="modal-text" id="modalText">Mark <span id="modalWeekLabel">Week 1</span> as paid?</div>
             <div style="display:flex;justify-content:flex-end;gap:8px;">
                 <button class="btn btn-outline" id="btnCancel">Cancel</button>
-                <button class="btn btn-primary" id="btnConfirm">Confirm</button>
+                <button class="btn btn-primary" id="btnConfirm">Paid</button>
             </div>
         </div>
     </div>
 
     <script>
         /* ------------------------------
-           Working script (keep your design)
-           - uses only `id`
-           - renders 52 cells
-           - optimistic updates with PUT /api/members/:id
-           - updates summary (weeks paid, amount paid, remaining)
+           Behavior:
+           - Click a cell -> open modal asking "Mark Week N as paid?" (or "Unmark...")
+           - On confirm -> optimistic update + PUT to persist
+           - Revert on failure
+           - Summaries update on confirm
+           - Uses only `id` from URL
            ------------------------------ */
 
         // CONFIG
         const API_BASE = 'https://sskchitbackend.onrender.com/api';
         const TOTAL_WEEKS = 52;
-        const SCHEME_START = new Date(2025, 9, 12); // 12 Oct 2025 (same as your original)
+        const SCHEME_START = new Date(2025, 9, 12); // 12 Oct 2025
 
-        // DOM REFS
+        // DOM
         const avatarCircle = document.getElementById('avatarCircle');
         const memberNameEl = document.getElementById('memberName');
         const memberStatusEl = document.getElementById('memberStatus');
@@ -468,7 +163,6 @@
         const infoStartEl = document.getElementById('infoStart');
 
         const weekGridEl = document.getElementById('weekGrid');
-        const weekLabelRow = document.getElementById('weekLabelRow');
 
         const summaryPaidWeeksEl = document.getElementById('summaryPaidWeeks');
         const summaryPendingWeeksEl = document.getElementById('summaryPendingWeeks');
@@ -481,30 +175,23 @@
         const btnCancel = document.getElementById('btnCancel');
         const btnConfirm = document.getElementById('btnConfirm');
         const modalWeekLabel = document.getElementById('modalWeekLabel');
-        const modalTitle = document.getElementById('modalTitle');
         const modalText = document.getElementById('modalText');
+        const modalTitle = document.getElementById('modalTitle');
 
         // STATE
         let currentMember = null;
-        let weekDates = []; // computed week start dates strings
+        let weekDates = [];
+        let selectedWeekIndex = null;
         let pendingUpdate = false;
 
-        // TOKEN
+        // token helper
         function getToken() {
             return localStorage.getItem('token') || null;
         }
 
-        // get id only from URL
         function getMemberIdFromUrl() {
-            const qs = new URLSearchParams(window.location.search);
-            return qs.get('id');
-        }
-
-        // format date helpers
-        function formatDateShort(d) {
-            // e.g. 12 Oct
-            const opts = { day: 'numeric', month: 'short' };
-            return d.toLocaleDateString(undefined, opts);
+            const p = new URLSearchParams(window.location.search);
+            return p.get('id');
         }
 
         function addDays(date, days) {
@@ -513,7 +200,11 @@
             return nd;
         }
 
-        // compute 52 week start dates from SCHEME_START
+        function formatDateShort(d) {
+            const opts = { day: 'numeric', month: 'short' };
+            return d.toLocaleDateString(undefined, opts);
+        }
+
         function initWeekDates() {
             weekDates = [];
             for (let i = 0; i < TOTAL_WEEKS; i++) {
@@ -522,7 +213,6 @@
             }
         }
 
-        // ensure paidWeeks array has length 52 booleans
         function normalizePaidWeeks(arr) {
             if (!Array.isArray(arr)) return Array(TOTAL_WEEKS).fill(false);
             if (arr.length === TOTAL_WEEKS) return arr.map(Boolean);
@@ -531,7 +221,7 @@
             return res;
         }
 
-        // API helpers (use only id)
+        // API helpers (id only)
         async function apiGetMember(id) {
             try {
                 const res = await fetch(`${API_BASE}/members/${encodeURIComponent(id)}`);
@@ -592,24 +282,22 @@
 
         function updateSummaryUI(member) {
             const arr = normalizePaidWeeks(member.paidWeeks);
-            const summary = computeSummary(arr, member.amount);
-            summaryPaidWeeksEl.textContent = summary.paidCount;
-            summaryPendingWeeksEl.textContent = summary.pendingCount;
-            summaryPaidAmountEl.textContent = summary.paidAmount;
-            summaryPendingAmountEl.textContent = summary.pendingAmount;
+            const s = computeSummary(arr, member.amount);
+            summaryPaidWeeksEl.textContent = s.paidCount;
+            summaryPendingWeeksEl.textContent = s.pendingCount;
+            summaryPaidAmountEl.textContent = s.paidAmount;
+            summaryPendingAmountEl.textContent = s.pendingAmount;
         }
 
-        // render all 52 week cells
+        // render 52 cells
         function renderWeekGrid(member) {
             weekGridEl.innerHTML = '';
             const arr = normalizePaidWeeks(member.paidWeeks);
-
             for (let i = 0; i < TOTAL_WEEKS; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'week-cell' + (arr[i] ? ' paid' : '');
                 cell.dataset.weekIndex = String(i);
 
-                // content: week number + date (keeps your original two-line style)
                 const w = document.createElement('div');
                 w.className = 'cell-week';
                 w.textContent = `W ${i + 1}`;
@@ -621,61 +309,95 @@
                 cell.appendChild(w);
                 cell.appendChild(d);
 
-                // click handler - optimistic update
-                cell.addEventListener('click', async (ev) => {
-                    ev.preventDefault();
-                    if (pendingUpdate) return; // avoid concurrent updates
-
-                    const idx = Number(cell.dataset.weekIndex);
-                    const oldArr = normalizePaidWeeks(member.paidWeeks);
-                    const newArr = oldArr.slice();
-                    newArr[idx] = !newArr[idx]; // toggle
-                    // optimistic apply
-                    member.paidWeeks = newArr.slice();
-                    updateCellUI(cell, newArr[idx]);
-                    updateSummaryUI(member);
-
-                    // persist
-                    pendingUpdate = true;
-                    try {
-                        const id = getMemberIdFromUrl();
-                        if (!id) throw new Error('Missing id (login might be required)');
-                        const res = await apiUpdateMember(id, { paidWeeks: member.paidWeeks });
-                        // if server replies with paidWeeks, sync to server's truth
-                        if (res && Array.isArray(res.paidWeeks)) {
-                            member.paidWeeks = normalizePaidWeeks(res.paidWeeks);
-                        }
-                        // re-render entire grid to ensure consistency (cheap)
-                        renderWeekGrid(member);
-                        updateSummaryUI(member);
-                    } catch (err) {
-                        console.error('Save failed', err);
-                        // revert optimistic change
-                        member.paidWeeks = oldArr.slice();
-                        renderWeekGrid(member);
-                        updateSummaryUI(member);
-                        // if authentication issue, prompt to login
-                        if ((err.message || '').toLowerCase().includes('login') || (err.message || '').toLowerCase().includes('auth')) {
-                            if (confirm('You must be logged in to update payments. Go to login now?')) {
-                                window.location.href = 'index.html';
-                            }
-                        } else {
-                            alert('Could not save change: ' + (err.message || 'server error'));
-                        }
-                    } finally {
-                        pendingUpdate = false;
-                    }
+                // click -> open confirmation modal instead of immediate toggle
+                cell.addEventListener('click', (ev) => {
+                    if (pendingUpdate) return;
+                    selectedWeekIndex = Number(cell.dataset.weekIndex);
+                    const alreadyPaid = !!arr[selectedWeekIndex];
+                    modalWeekLabel.textContent = `Week ${selectedWeekIndex + 1}`;
+                    modalTitle.textContent = alreadyPaid ? 'Confirm Unmark' : 'Confirm Payment';
+                    modalText.innerHTML = alreadyPaid
+                        ? `Unmark <strong>Week ${selectedWeekIndex + 1}</strong> as paid?`
+                        : `Mark <strong>Week ${selectedWeekIndex + 1}</strong> as paid?`;
+                    // show confirm button text based on action
+                    btnConfirm.textContent = alreadyPaid ? 'Unmark' : 'Paid';
+                    modalOverlay.classList.add('open');
+                    modalOverlay.setAttribute('aria-hidden', 'false');
                 });
 
                 weekGridEl.appendChild(cell);
             }
         }
 
-        function updateCellUI(cellEl, isPaid) {
-            cellEl.classList.toggle('paid', !!isPaid);
-        }
+        // handle confirm from modal: optimistic update then persist
+        btnConfirm.addEventListener('click', async () => {
+            if (selectedWeekIndex === null) {
+                modalOverlay.classList.remove('open');
+                modalOverlay.setAttribute('aria-hidden', 'true');
+                return;
+            }
+            // guard
+            if (!currentMember) {
+                alert('Member not loaded.');
+                modalOverlay.classList.remove('open');
+                modalOverlay.setAttribute('aria-hidden', 'true');
+                return;
+            }
+            if (pendingUpdate) {
+                alert('Another update is in progress.');
+                return;
+            }
 
-        // Cancel plan (delete member)
+            // prepare optimistic change
+            const oldArr = normalizePaidWeeks(currentMember.paidWeeks);
+            const newArr = oldArr.slice();
+            newArr[selectedWeekIndex] = !newArr[selectedWeekIndex];
+
+            // apply optimistic UI
+            currentMember.paidWeeks = newArr.slice();
+            renderWeekGrid(currentMember);
+            updateSummaryUI(currentMember);
+
+            // close modal
+            modalOverlay.classList.remove('open');
+            modalOverlay.setAttribute('aria-hidden', 'true');
+
+            // persist
+            pendingUpdate = true;
+            try {
+                const id = getMemberIdFromUrl();
+                if (!id) throw new Error('Missing member id (login required).');
+                const res = await apiUpdateMember(id, { paidWeeks: currentMember.paidWeeks });
+                // sync with server truth if returned
+                if (res && Array.isArray(res.paidWeeks)) {
+                    currentMember.paidWeeks = normalizePaidWeeks(res.paidWeeks);
+                    renderWeekGrid(currentMember);
+                    updateSummaryUI(currentMember);
+                }
+            } catch (err) {
+                console.error('Save failed', err);
+                // revert optimistic
+                currentMember.paidWeeks = oldArr.slice();
+                renderWeekGrid(currentMember);
+                updateSummaryUI(currentMember);
+                if ((err.message || '').toLowerCase().includes('login')) {
+                    if (confirm('You must be logged in to update payments. Go to login now?')) window.location.href = 'index.html';
+                } else {
+                    alert('Could not save change: ' + (err.message || 'server error'));
+                }
+            } finally {
+                pendingUpdate = false;
+                selectedWeekIndex = null;
+            }
+        });
+
+        btnCancel.addEventListener('click', () => {
+            modalOverlay.classList.remove('open');
+            modalOverlay.setAttribute('aria-hidden', 'true');
+            selectedWeekIndex = null;
+        });
+
+        // Cancel plan / delete
         cancelPlanBtn.addEventListener('click', async () => {
             if (!currentMember) return;
             if (!confirm(`Remove ${currentMember.name}? This deletes the member.`)) return;
@@ -694,12 +416,8 @@
             }
         });
 
-        // OPTIONAL modal handlers (kept for compatibility; not used by default)
-        btnCancel.addEventListener('click', () => modalOverlay.classList.remove('open'));
-        btnConfirm.addEventListener('click', () => modalOverlay.classList.remove('open'));
-
-        // INIT
-        async function init() {
+        // init/load
+        (async function init() {
             initWeekDates();
             const id = getMemberIdFromUrl();
             if (!id) {
@@ -707,10 +425,9 @@
                 window.location.href = 'members.html';
                 return;
             }
-
             // loading UI
             memberNameEl.textContent = 'Loading…';
-            weekGridEl.innerHTML = '<div style="padding:20px;color:#666;">Loading weeks…</div>';
+            weekGridEl.innerHTML = '<div style="padding:20px;color:#666">Loading weeks…</div>';
 
             const m = await apiGetMember(id);
             if (!m) {
@@ -719,16 +436,14 @@
                 return;
             }
 
-            // normalize paidWeeks to exactly 52 booleans
+            // normalize to 52
             m.paidWeeks = normalizePaidWeeks(m.paidWeeks);
             currentMember = m;
-
-            // set header and grid
             setHeaderInfo(currentMember);
             renderWeekGrid(currentMember);
             updateSummaryUI(currentMember);
 
-            // If server stored fewer than 52 weeks, try to persist normalized array (only if logged in)
+            // if fewer weeks stored on server, try to persist normalization (non-critical)
             try {
                 if (getToken() && (!Array.isArray(m.paidWeeks) || m.paidWeeks.length !== TOTAL_WEEKS)) {
                     await apiUpdateMember(id, { paidWeeks: currentMember.paidWeeks });
@@ -736,10 +451,77 @@
             } catch (e) {
                 console.warn('Could not persist normalized paidWeeks (non-fatal)', e);
             }
+        })();
+
+        // helper functions used earlier
+        function setHeaderInfo(member) {
+            avatarCircle.textContent = (member.name && member.name[0]) ? member.name[0].toUpperCase() : 'M';
+            memberNameEl.textContent = member.name || 'Member Name';
+            memberStatusEl.textContent = member.status || 'Weekly contribution member';
+            amountChipEl.textContent = `₹${Number(member.amount || 0)} / week`;
+            infoAmountEl.textContent = `₹${Number(member.amount || 0)}`;
+            infoStartEl.textContent = (() => {
+                initWeekDates();
+                return weekDates[0] || '--';
+            })();
         }
 
-        // start
-        init();
+        // api helpers (redeclared here so functions are available earlier)
+        async function apiGetMember(id) {
+            try {
+                const res = await fetch(`${API_BASE}/members/${encodeURIComponent(id)}`);
+                if (!res.ok) throw new Error('Member fetch failed');
+                return res.json();
+            } catch (e) {
+                console.error(e);
+                return null;
+            }
+        }
+        async function apiUpdateMember(id, updates) {
+            const token = getToken();
+            if (!token) throw new Error('Login required');
+            const res = await fetch(`${API_BASE}/members/${encodeURIComponent(id)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(updates)
+            });
+            if (!res.ok) {
+                const txt = await res.text().catch(() => null);
+                throw new Error(txt || 'Update failed');
+            }
+            return res.json();
+        }
+        async function apiDeleteMember(id) {
+            const token = getToken();
+            if (!token) throw new Error('Login required');
+            const res = await fetch(`${API_BASE}/members/${encodeURIComponent(id)}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) {
+                const txt = await res.text().catch(() => null);
+                throw new Error(txt || 'Delete failed');
+            }
+            return res.json();
+        }
+
+        // initWeekDates definition (ensure weekDates available)
+        function initWeekDates() {
+            weekDates = [];
+            for (let i = 0; i < TOTAL_WEEKS; i++) {
+                const d = addDays(SCHEME_START, i * 7);
+                weekDates.push(formatDateShort(d));
+            }
+        }
+        function addDays(date, days) {
+            const nd = new Date(date.getTime());
+            nd.setDate(nd.getDate() + days);
+            return nd;
+        }
+        function formatDateShort(d) {
+            const opts = { day: 'numeric', month: 'short' };
+            return d.toLocaleDateString(undefined, opts);
+        }
     </script>
 
 </body>
