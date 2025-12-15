@@ -446,28 +446,39 @@
     </div>
 
     <script>
-        /* ------------------------------
-           CONFIRM-FIRST PAYMENT LOGIC
-           UI UNCHANGED – LOGIC ONLY
-        ------------------------------ */
+        /* =========================================
+           FIXED LOGIC
+           - Paid weeks cannot be clicked again
+           - Member details always render
+           - UI unchanged
+        ========================================= */
 
         const API_BASE = 'https://sskchitbackend.onrender.com/api';
         const TOTAL_WEEKS = 52;
         const SCHEME_START = new Date(2025, 9, 12);
 
-        // DOM
+        // DOM refs
+        const avatarCircle = document.getElementById('avatarCircle');
+        const memberNameEl = document.getElementById('memberName');
+        const memberStatusEl = document.getElementById('memberStatus');
+        const amountChipEl = document.getElementById('amountChip');
+        const infoAmountEl = document.getElementById('infoAmount');
+        const infoStartEl = document.getElementById('infoStart');
+
         const weekGridEl = document.getElementById('weekGrid');
-        const modalOverlay = document.getElementById('modalOverlay');
-        const modalWeekLabel = document.getElementById('modalWeekLabel');
-        const modalText = document.getElementById('modalText');
-        const btnCancel = document.getElementById('btnCancel');
-        const btnConfirm = document.getElementById('btnConfirm');
 
         const summaryPaidWeeksEl = document.getElementById('summaryPaidWeeks');
         const summaryPendingWeeksEl = document.getElementById('summaryPendingWeeks');
         const summaryPaidAmountEl = document.getElementById('summaryPaidAmount');
         const summaryPendingAmountEl = document.getElementById('summaryPendingAmount');
 
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalWeekLabel = document.getElementById('modalWeekLabel');
+        const modalText = document.getElementById('modalText');
+        const btnCancel = document.getElementById('btnCancel');
+        const btnConfirm = document.getElementById('btnConfirm');
+
+        // state
         let currentMember = null;
         let weekDates = [];
         let selectedWeekIndex = null;
@@ -524,11 +535,21 @@
             return res.json();
         }
 
-        // UI
+        // UI rendering
+        function renderHeader(member) {
+            avatarCircle.textContent = member.name ? member.name[0].toUpperCase() : 'M';
+            memberNameEl.textContent = member.name || 'Member';
+            memberStatusEl.textContent = member.status || 'Weekly member';
+            amountChipEl.textContent = `₹${member.amount} / week`;
+            infoAmountEl.textContent = `₹${member.amount}`;
+            infoStartEl.textContent = weekDates[0] || '--';
+        }
+
         function updateSummary(member) {
             const arr = normalizePaidWeeks(member.paidWeeks);
             const paid = arr.filter(Boolean).length;
             const pending = TOTAL_WEEKS - paid;
+
             summaryPaidWeeksEl.textContent = paid;
             summaryPendingWeeksEl.textContent = pending;
             summaryPaidAmountEl.textContent = paid * member.amount;
@@ -542,7 +563,6 @@
             for (let i = 0; i < TOTAL_WEEKS; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'week-cell' + (arr[i] ? ' paid' : '');
-                cell.dataset.index = i;
 
                 const w = document.createElement('div');
                 w.className = 'cell-week';
@@ -555,14 +575,15 @@
                 cell.appendChild(w);
                 cell.appendChild(d);
 
-                // 🔒 IMPORTANT: open confirmation only
-                cell.addEventListener('click', () => {
-                    if (arr[i]) return; // already paid → do nothing
-                    selectedWeekIndex = i;
-                    modalWeekLabel.textContent = `Week ${i + 1}`;
-                    modalText.innerHTML = `Confirm payment for <strong>Week ${i + 1}</strong>?`;
-                    modalOverlay.classList.add('open');
-                });
+                // 🔒 HARD BLOCK: already paid → no action
+                if (!arr[i]) {
+                    cell.addEventListener('click', () => {
+                        selectedWeekIndex = i;
+                        modalWeekLabel.textContent = `Week ${i + 1}`;
+                        modalText.innerHTML = `Confirm payment for <strong>Week ${i + 1}</strong>?`;
+                        modalOverlay.classList.add('open');
+                    });
+                }
 
                 weekGridEl.appendChild(cell);
             }
@@ -570,7 +591,7 @@
             updateSummary(currentMember);
         }
 
-        // modal actions
+        // modal
         btnCancel.onclick = () => {
             modalOverlay.classList.remove('open');
             selectedWeekIndex = null;
@@ -588,7 +609,7 @@
                 currentMember.paidWeeks = normalizePaidWeeks(updated.paidWeeks);
                 renderGrid();
             } catch (e) {
-                alert('Failed to update payment');
+                alert('Payment update failed');
             } finally {
                 modalOverlay.classList.remove('open');
                 selectedWeekIndex = null;
@@ -599,17 +620,24 @@
         (async function init() {
             initWeekDates();
             const id = getMemberIdFromUrl();
-            if (!id) return alert('Member ID missing');
+            if (!id) {
+                alert('Member ID missing');
+                return;
+            }
 
-            const m = await apiGetMember(id);
-            if (!m) return alert('Member not found');
+            const member = await apiGetMember(id);
+            if (!member) {
+                alert('Member not found');
+                return;
+            }
 
-            m.paidWeeks = normalizePaidWeeks(m.paidWeeks);
-            currentMember = m;
+            member.paidWeeks = normalizePaidWeeks(member.paidWeeks);
+            currentMember = member;
 
+            renderHeader(currentMember);
             renderGrid();
         })();
-    </script> 
+    </script>
 
 </body>
 
