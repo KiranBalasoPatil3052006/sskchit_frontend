@@ -451,7 +451,7 @@
 
     <script>
         /* ===============================
-           CONFIRM-BASED PAYMENT LOGIC
+           CONFIRM-BASED PAYMENT + RECEIPT
         ================================ */
 
         const API_BASE = 'https://sskchitbackend.onrender.com/api';
@@ -478,11 +478,17 @@
             return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
         };
 
+        const nextPaymentDate = arr => {
+            const last = arr.lastIndexOf(true);
+            return weekDate(last + 1);
+        };
+
         // ---------- API ----------
         async function apiGetMember(id) {
             const r = await fetch(`${API_BASE}/members/${id}`);
             return r.ok ? r.json() : null;
         }
+
         async function apiUpdate(id, data) {
             const r = await fetch(`${API_BASE}/members/${id}`, {
                 method: 'PUT',
@@ -511,7 +517,7 @@
                 c.onclick = () => {
                     selectedWeekIndex = i;
                     modalText.innerHTML = paid
-                        ? `This week is already <b>PAID</b>.<br>Cancel payment?`
+                        ? `This week is already <b>PAID</b>.<br>Do you want to cancel this payment?`
                         : `Confirm payment for <b>Week ${i + 1}</b>?`;
                     modalOverlay.classList.add('open');
                 };
@@ -545,7 +551,7 @@
         // ---------- INIT ----------
         (async () => {
             const id = getMemberId();
-            if (!id) return alert('ID missing');
+            if (!id) return alert('Member ID missing');
 
             const m = await apiGetMember(id);
             if (!m) return alert('Member not found');
@@ -563,7 +569,7 @@
         })();
 
         /* ===============================
-           RECEIPT PDF (FINAL)
+           RECEIPT PDF (FINAL VERSION)
         ================================ */
 
         function generateReceiptPDF(m) {
@@ -573,22 +579,27 @@
             const arr = normalizePaidWeeks(m.paidWeeks);
             const paid = arr.filter(Boolean).length;
             const last = arr.lastIndexOf(true);
-            const next = last >= 0 ? weekDate(last + 1) : weekDate(0);
 
             const theme = [210, 184, 155];
+
+            // Header
             doc.setFillColor(...theme);
-            doc.rect(0, 0, 210, 25, 'F');
+            doc.rect(0, 0, 210, 30, 'F');
 
             doc.setFontSize(16);
-            doc.text('SSK Chit Funds', 14, 16);
-            doc.text('PAYMENT RECEIPT', 150, 16);
-
+            doc.text('SSK Chit Funds', 14, 18);
             doc.setFontSize(10);
-            doc.text(`Receipt No: SSK-${Date.now()}`, 14, 32);
-            doc.text(`Date: ${new Date().toLocaleDateString()}`, 150, 32);
+            doc.text('Address: Main Road, Tamil Nadu', 14, 24);
+            doc.text('Email: sskchits@gmail.com | Contact: 9XXXXXXXXX', 120, 24);
 
+            // Receipt Meta
+            doc.setFontSize(11);
+            doc.text(`Receipt No: SSK-${Date.now()}`, 14, 40);
+            doc.text(`Generated (UTC): ${new Date().toUTCString()}`, 120, 40);
+
+            // Member & Payment Details
             doc.autoTable({
-                startY: 40,
+                startY: 50,
                 theme: 'grid',
                 headStyles: { fillColor: theme },
                 body: [
@@ -598,34 +609,51 @@
                     ['Total Paid', `₹${paid * m.amount}`],
                     ['Remaining', `₹${(TOTAL_WEEKS - paid) * m.amount}`],
                     ['Last Paid Week', last >= 0 ? `Week ${last + 1}` : '—'],
-                    ['Next Payment Date', next]
+                    ['Next Payment Date', nextPaymentDate(arr)]
                 ]
             });
 
+            // Signature
             const y = doc.lastAutoTable.finalY + 20;
-            doc.text('Authorized Signature', 14, y);
-            doc.rect(14, y + 5, 60, 20);
-            doc.text('(Signature)', 28, y + 18);
+            doc.text('Authorized Signature', 140, y);
+            doc.rect(140, y + 4, 50, 18);
 
+            // Footer
             doc.setFontSize(9);
-            doc.text('System generated receipt. Thank you.', 14, 285);
+            doc.text('© sskchitfunds2025 | System Generated Receipt', 14, 285);
 
             return doc;
         }
+
+        // ---------- BUTTONS ----------
+        downloadReceiptBtn.onclick = () => {
+            const pdf = generateReceiptPDF(currentMember);
+            pdf.save(`Receipt_${currentMember.name}.pdf`);
+        };
 
         shareReceiptBtn.onclick = async () => {
             const pdf = generateReceiptPDF(currentMember);
             const blob = pdf.output('blob');
             const file = new File([blob], `Receipt_${currentMember.name}.pdf`, { type: 'application/pdf' });
 
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({ title: 'Payment Receipt', files: [file] });
-            } else {
-                pdf.save(file.name);
-            }
+            await navigator.share({
+                title: 'SSK Chit Payment Receipt',
+                files: [file]
+            });
+        };
+
+        screenShareBtn.onclick = async () => {
+            const canvas = await html2canvas(document.body);
+            const blob = await new Promise(res => canvas.toBlob(res));
+
+            const file = new File([blob], 'payment_screenshot.png', { type: 'image/png' });
+            await navigator.share({
+                title: 'SSK Chit Payment',
+                files: [file]
+            });
         };
     </script>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </body>
