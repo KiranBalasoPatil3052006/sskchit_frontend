@@ -404,12 +404,22 @@
 
                 <div style="margin-top:10px;">
                     <button id="cancelPlanBtn" class="btn btn-outline">Cancel Plan (Remove member)</button>
-                </div>
-                <button id="shareReceiptBtn" class="btn btn-primary">
-                    Share Payment Receipt
-                </button>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+                        <button id="downloadReceiptBtn" class="btn btn-outline">
+                            ⬇ Download Receipt
+                        </button>
 
-            </div>
+                        <button id="shareReceiptBtn" class="btn btn-primary">
+                            📤 Share Receipt (WhatsApp)
+                        </button>
+
+                        <button id="screenShareBtn" class="btn btn-outline">
+                            📸 Screen & Share
+                        </button>
+                    </div>
+
+
+                </div>
         </section>
 
         <section class="grid-card">
@@ -451,7 +461,7 @@
 
     <script>
         /* ===============================
-           CONFIRM-BASED PAYMENT + RECEIPT
+           CONFIRM-BASED PAYMENT LOGIC
         ================================ */
 
         const API_BASE = 'https://sskchitbackend.onrender.com/api';
@@ -478,17 +488,11 @@
             return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
         };
 
-        const nextPaymentDate = arr => {
-            const last = arr.lastIndexOf(true);
-            return weekDate(last + 1);
-        };
-
         // ---------- API ----------
         async function apiGetMember(id) {
             const r = await fetch(`${API_BASE}/members/${id}`);
             return r.ok ? r.json() : null;
         }
-
         async function apiUpdate(id, data) {
             const r = await fetch(`${API_BASE}/members/${id}`, {
                 method: 'PUT',
@@ -517,7 +521,7 @@
                 c.onclick = () => {
                     selectedWeekIndex = i;
                     modalText.innerHTML = paid
-                        ? `This week is already <b>PAID</b>.<br>Do you want to cancel this payment?`
+                        ? `This week is already <b>PAID</b>.<br>Cancel payment?`
                         : `Confirm payment for <b>Week ${i + 1}</b>?`;
                     modalOverlay.classList.add('open');
                 };
@@ -551,7 +555,7 @@
         // ---------- INIT ----------
         (async () => {
             const id = getMemberId();
-            if (!id) return alert('Member ID missing');
+            if (!id) return alert('ID missing');
 
             const m = await apiGetMember(id);
             if (!m) return alert('Member not found');
@@ -568,94 +572,129 @@
             render();
         })();
 
-        /* ===============================
-           RECEIPT PDF (FINAL VERSION)
-        ================================ */
+        /* ============================
+        RECEIPT + SHARE (WORKING)
+        ============================ */
 
-        function generateReceiptPDF(m) {
+        const downloadBtn = document.getElementById('downloadReceiptBtn');
+        const shareBtn = document.getElementById('shareReceiptBtn');
+        const screenBtn = document.getElementById('screenShareBtn');
+
+        function generateReceiptPDF(member) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            const arr = normalizePaidWeeks(m.paidWeeks);
-            const paid = arr.filter(Boolean).length;
-            const last = arr.lastIndexOf(true);
+            const paidArr = normalizePaidWeeks(member.paidWeeks);
+            const paidWeeks = paidArr.filter(Boolean).length;
+            const lastPaidIndex = paidArr.lastIndexOf(true);
+            const nextPayDate = lastPaidIndex >= 0
+                ? weekDates[lastPaidIndex + 1] || '--'
+                : weekDates[0];
 
             const theme = [210, 184, 155];
+            const text = [58, 37, 27];
 
-            // Header
+            /* HEADER */
             doc.setFillColor(...theme);
             doc.rect(0, 0, 210, 30, 'F');
 
+            doc.setTextColor(...text);
             doc.setFontSize(16);
             doc.text('SSK Chit Funds', 14, 18);
-            doc.setFontSize(10);
-            doc.text('Address: Main Road, Tamil Nadu', 14, 24);
-            doc.text('Email: sskchits@gmail.com | Contact: 9XXXXXXXXX', 120, 24);
 
-            // Receipt Meta
-            doc.setFontSize(11);
+            doc.setFontSize(9);
+            doc.text('Address: Your Address Here', 14, 24);
+            doc.text('Email: sskchits@gmail.com | Ph: 9XXXXXXXXX', 120, 24);
+
+            /* RECEIPT META */
+            doc.setFontSize(10);
             doc.text(`Receipt No: SSK-${Date.now()}`, 14, 40);
             doc.text(`Generated (UTC): ${new Date().toUTCString()}`, 120, 40);
 
-            // Member & Payment Details
+            /* TABLE */
             doc.autoTable({
                 startY: 50,
                 theme: 'grid',
                 headStyles: { fillColor: theme },
+                styles: { textColor: text },
                 body: [
-                    ['Member Name', m.name],
-                    ['Weekly Plan', `₹${m.amount}`],
-                    ['Weeks Paid', paid],
-                    ['Total Paid', `₹${paid * m.amount}`],
-                    ['Remaining', `₹${(TOTAL_WEEKS - paid) * m.amount}`],
-                    ['Last Paid Week', last >= 0 ? `Week ${last + 1}` : '—'],
-                    ['Next Payment Date', nextPaymentDate(arr)]
+                    ['Member Name', member.name],
+                    ['Weekly Plan', `₹${member.amount}`],
+                    ['Weeks Paid', paidWeeks],
+                    ['Total Paid', `₹${paidWeeks * member.amount}`],
+                    ['Remaining Amount', `₹${(52 - paidWeeks) * member.amount}`],
+                    ['Last Paid Week', lastPaidIndex >= 0 ? `Week ${lastPaidIndex + 1}` : '--'],
+                    ['Next Payment Date', nextPayDate]
                 ]
             });
 
-            // Signature
+            /* SIGNATURE */
             const y = doc.lastAutoTable.finalY + 20;
             doc.text('Authorized Signature', 140, y);
             doc.rect(140, y + 4, 50, 18);
 
-            // Footer
+            /* FOOTER */
             doc.setFontSize(9);
-            doc.text('© sskchitfunds2025 | System Generated Receipt', 14, 285);
+            doc.text('© sskchitfunds2025', 80, 285);
 
             return doc;
         }
 
-        // ---------- BUTTONS ----------
-        downloadReceiptBtn.onclick = () => {
+        /* DOWNLOAD */
+        downloadBtn.onclick = () => {
             const pdf = generateReceiptPDF(currentMember);
-            pdf.save(`Receipt_${currentMember.name}.pdf`);
+            pdf.save(`SSK_Receipt_${currentMember.name}.pdf`);
         };
 
-        shareReceiptBtn.onclick = async () => {
+        /* SHARE PDF (WHATSAPP) */
+        shareBtn.onclick = async () => {
             const pdf = generateReceiptPDF(currentMember);
             const blob = pdf.output('blob');
-            const file = new File([blob], `Receipt_${currentMember.name}.pdf`, { type: 'application/pdf' });
-
-            await navigator.share({
-                title: 'SSK Chit Payment Receipt',
-                files: [file]
+            const file = new File([blob], `Receipt_${currentMember.name}.pdf`, {
+                type: 'application/pdf'
             });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'SSK Chit Payment Receipt',
+                    files: [file]
+                });
+            } else {
+                pdf.save(file.name);
+            }
         };
 
-        screenShareBtn.onclick = async () => {
-            const canvas = await html2canvas(document.body);
-            const blob = await new Promise(res => canvas.toBlob(res));
+        /* SCREENSHOT + SHARE */
+        screenBtn.onclick = async () => {
+            const target = document.querySelector('.page');
 
-            const file = new File([blob], 'payment_screenshot.png', { type: 'image/png' });
-            await navigator.share({
-                title: 'SSK Chit Payment',
-                files: [file]
+            const canvas = await html2canvas(target, { scale: 2 });
+            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+
+            const file = new File([blob], `SSK_${currentMember.name}_screen.png`, {
+                type: 'image/png'
             });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'SSK Chit Payment',
+                    files: [file]
+                });
+            } else {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = file.name;
+                a.click();
+            }
         };
+
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 </body>
 
 </html>
