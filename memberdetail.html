@@ -446,18 +446,16 @@
     </div>
 
     <script>
-        /* =========================================
-           FIXED LOGIC
-           - Paid weeks cannot be clicked again
-           - Member details always render
-           - UI unchanged
-        ========================================= */
+        /* ===============================
+           CONFIRM-BASED TOGGLE (FINAL)
+           Paid ↔ Unpaid only via modal
+        ================================ */
 
         const API_BASE = 'https://sskchitbackend.onrender.com/api';
         const TOTAL_WEEKS = 52;
         const SCHEME_START = new Date(2025, 9, 12);
 
-        // DOM refs
+        // DOM
         const avatarCircle = document.getElementById('avatarCircle');
         const memberNameEl = document.getElementById('memberName');
         const memberStatusEl = document.getElementById('memberStatus');
@@ -478,19 +476,14 @@
         const btnCancel = document.getElementById('btnCancel');
         const btnConfirm = document.getElementById('btnConfirm');
 
-        // state
+        // STATE
         let currentMember = null;
         let weekDates = [];
         let selectedWeekIndex = null;
 
-        // helpers
-        function getToken() {
-            return localStorage.getItem('token');
-        }
-
-        function getMemberIdFromUrl() {
-            return new URLSearchParams(window.location.search).get('id');
-        }
+        // HELPERS
+        const getToken = () => localStorage.getItem('token');
+        const getMemberIdFromUrl = () => new URLSearchParams(window.location.search).get('id');
 
         function normalizePaidWeeks(arr) {
             const out = new Array(TOTAL_WEEKS).fill(false);
@@ -535,25 +528,25 @@
             return res.json();
         }
 
-        // UI rendering
-        function renderHeader(member) {
-            avatarCircle.textContent = member.name ? member.name[0].toUpperCase() : 'M';
-            memberNameEl.textContent = member.name || 'Member';
-            memberStatusEl.textContent = member.status || 'Weekly member';
-            amountChipEl.textContent = `₹${member.amount} / week`;
-            infoAmountEl.textContent = `₹${member.amount}`;
+        // UI
+        function renderHeader(m) {
+            avatarCircle.textContent = m.name ? m.name[0].toUpperCase() : 'M';
+            memberNameEl.textContent = m.name;
+            memberStatusEl.textContent = m.status || 'Weekly member';
+            amountChipEl.textContent = `₹${m.amount} / week`;
+            infoAmountEl.textContent = `₹${m.amount}`;
             infoStartEl.textContent = weekDates[0] || '--';
         }
 
-        function updateSummary(member) {
-            const arr = normalizePaidWeeks(member.paidWeeks);
+        function updateSummary(m) {
+            const arr = normalizePaidWeeks(m.paidWeeks);
             const paid = arr.filter(Boolean).length;
             const pending = TOTAL_WEEKS - paid;
 
             summaryPaidWeeksEl.textContent = paid;
             summaryPendingWeeksEl.textContent = pending;
-            summaryPaidAmountEl.textContent = paid * member.amount;
-            summaryPendingAmountEl.textContent = pending * member.amount;
+            summaryPaidAmountEl.textContent = paid * m.amount;
+            summaryPendingAmountEl.textContent = pending * m.amount;
         }
 
         function renderGrid() {
@@ -575,15 +568,15 @@
                 cell.appendChild(w);
                 cell.appendChild(d);
 
-                // 🔒 HARD BLOCK: already paid → no action
-                if (!arr[i]) {
-                    cell.addEventListener('click', () => {
-                        selectedWeekIndex = i;
-                        modalWeekLabel.textContent = `Week ${i + 1}`;
-                        modalText.innerHTML = `Confirm payment for <strong>Week ${i + 1}</strong>?`;
-                        modalOverlay.classList.add('open');
-                    });
-                }
+                // 🔁 ALWAYS OPEN CONFIRM MODAL
+                cell.onclick = () => {
+                    selectedWeekIndex = i;
+                    modalWeekLabel.textContent = `Week ${i + 1}`;
+                    modalText.innerHTML = arr[i]
+                        ? `This week is already <strong>PAID</strong>.<br>Do you want to <strong>cancel this payment</strong>?`
+                        : `Confirm payment for <strong>Week ${i + 1}</strong>?`;
+                    modalOverlay.classList.add('open');
+                };
 
                 weekGridEl.appendChild(cell);
             }
@@ -591,7 +584,7 @@
             updateSummary(currentMember);
         }
 
-        // modal
+        // MODAL
         btnCancel.onclick = () => {
             modalOverlay.classList.remove('open');
             selectedWeekIndex = null;
@@ -601,7 +594,7 @@
             if (selectedWeekIndex === null) return;
 
             const arr = normalizePaidWeeks(currentMember.paidWeeks);
-            arr[selectedWeekIndex] = true;
+            arr[selectedWeekIndex] = !arr[selectedWeekIndex]; // 🔁 TOGGLE HERE
 
             try {
                 const id = getMemberIdFromUrl();
@@ -609,7 +602,7 @@
                 currentMember.paidWeeks = normalizePaidWeeks(updated.paidWeeks);
                 renderGrid();
             } catch (e) {
-                alert('Payment update failed');
+                alert('Failed to update payment');
             } finally {
                 modalOverlay.classList.remove('open');
                 selectedWeekIndex = null;
@@ -620,21 +613,15 @@
         (async function init() {
             initWeekDates();
             const id = getMemberIdFromUrl();
-            if (!id) {
-                alert('Member ID missing');
-                return;
-            }
+            if (!id) return alert('Member ID missing');
 
-            const member = await apiGetMember(id);
-            if (!member) {
-                alert('Member not found');
-                return;
-            }
+            const m = await apiGetMember(id);
+            if (!m) return alert('Member not found');
 
-            member.paidWeeks = normalizePaidWeeks(member.paidWeeks);
-            currentMember = member;
+            m.paidWeeks = normalizePaidWeeks(m.paidWeeks);
+            currentMember = m;
 
-            renderHeader(currentMember);
+            renderHeader(m);
             renderGrid();
         })();
     </script>
