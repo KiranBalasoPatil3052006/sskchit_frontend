@@ -451,173 +451,101 @@
 
     <script>
         /* ===============================
-           CONFIRM-BASED TOGGLE (FINAL)
-           Paid ↔ Unpaid only via modal
+           CONFIRM-BASED PAYMENT LOGIC
         ================================ */
 
         const API_BASE = 'https://sskchitbackend.onrender.com/api';
         const TOTAL_WEEKS = 52;
         const SCHEME_START = new Date(2025, 9, 12);
 
-        // DOM
-        const avatarCircle = document.getElementById('avatarCircle');
-        const memberNameEl = document.getElementById('memberName');
-        const memberStatusEl = document.getElementById('memberStatus');
-        const amountChipEl = document.getElementById('amountChip');
-        const infoAmountEl = document.getElementById('infoAmount');
-        const infoStartEl = document.getElementById('infoStart');
-
-        const weekGridEl = document.getElementById('weekGrid');
-
-        const summaryPaidWeeksEl = document.getElementById('summaryPaidWeeks');
-        const summaryPendingWeeksEl = document.getElementById('summaryPendingWeeks');
-        const summaryPaidAmountEl = document.getElementById('summaryPaidAmount');
-        const summaryPendingAmountEl = document.getElementById('summaryPendingAmount');
-
-        const modalOverlay = document.getElementById('modalOverlay');
-        const modalWeekLabel = document.getElementById('modalWeekLabel');
-        const modalText = document.getElementById('modalText');
-        const btnCancel = document.getElementById('btnCancel');
-        const btnConfirm = document.getElementById('btnConfirm');
-
-        // STATE
+        // ---------- STATE ----------
         let currentMember = null;
-        let weekDates = [];
         let selectedWeekIndex = null;
 
-        // HELPERS
+        // ---------- HELPERS ----------
         const getToken = () => localStorage.getItem('token');
-        const getMemberIdFromUrl = () => new URLSearchParams(window.location.search).get('id');
+        const getMemberId = () => new URLSearchParams(location.search).get('id');
 
-        function normalizePaidWeeks(arr) {
-            const out = new Array(TOTAL_WEEKS).fill(false);
-            if (Array.isArray(arr)) {
-                for (let i = 0; i < Math.min(arr.length, TOTAL_WEEKS); i++) {
-                    out[i] = !!arr[i];
-                }
-            }
+        const normalizePaidWeeks = (arr = []) => {
+            const out = Array(TOTAL_WEEKS).fill(false);
+            arr.forEach((v, i) => out[i] = !!v);
             return out;
-        }
+        };
 
-        function formatDateShort(d) {
+        const weekDate = i => {
+            const d = new Date(SCHEME_START);
+            d.setDate(d.getDate() + i * 7);
             return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-        }
+        };
 
-        function initWeekDates() {
-            weekDates = [];
-            for (let i = 0; i < TOTAL_WEEKS; i++) {
-                const d = new Date(SCHEME_START);
-                d.setDate(d.getDate() + i * 7);
-                weekDates.push(formatDateShort(d));
-            }
-        }
-
-        // API
+        // ---------- API ----------
         async function apiGetMember(id) {
-            const res = await fetch(`${API_BASE}/members/${id}`);
-            if (!res.ok) return null;
-            return res.json();
+            const r = await fetch(`${API_BASE}/members/${id}`);
+            return r.ok ? r.json() : null;
         }
-
-        async function apiUpdateMember(id, updates) {
-            const res = await fetch(`${API_BASE}/members/${id}`, {
+        async function apiUpdate(id, data) {
+            const r = await fetch(`${API_BASE}/members/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${getToken()}`
                 },
-                body: JSON.stringify(updates)
+                body: JSON.stringify(data)
             });
-            if (!res.ok) throw new Error('Update failed');
-            return res.json();
+            if (!r.ok) throw new Error();
+            return r.json();
         }
 
-        // UI
-        function renderHeader(m) {
-            avatarCircle.textContent = m.name ? m.name[0].toUpperCase() : 'M';
-            memberNameEl.textContent = m.name;
-            memberStatusEl.textContent = m.status || 'Weekly member';
-            amountChipEl.textContent = `₹${m.amount} / week`;
-            infoAmountEl.textContent = `₹${m.amount}`;
-            infoStartEl.textContent = weekDates[0] || '--';
-        }
-
-        function updateSummary(m) {
-            const arr = normalizePaidWeeks(m.paidWeeks);
-            const paid = arr.filter(Boolean).length;
-            const pending = TOTAL_WEEKS - paid;
-
-            summaryPaidWeeksEl.textContent = paid;
-            summaryPendingWeeksEl.textContent = pending;
-            summaryPaidAmountEl.textContent = paid * m.amount;
-            summaryPendingAmountEl.textContent = pending * m.amount;
-        }
-
-        function renderGrid() {
-            weekGridEl.innerHTML = '';
+        // ---------- UI ----------
+        function render() {
             const arr = normalizePaidWeeks(currentMember.paidWeeks);
+            weekGrid.innerHTML = '';
 
-            for (let i = 0; i < TOTAL_WEEKS; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'week-cell' + (arr[i] ? ' paid' : '');
-
-                const w = document.createElement('div');
-                w.className = 'cell-week';
-                w.textContent = `W ${i + 1}`;
-
-                const d = document.createElement('div');
-                d.className = 'cell-date';
-                d.textContent = arr[i] ? 'PAID' : weekDates[i];
-
-                cell.appendChild(w);
-                cell.appendChild(d);
-
-                // 🔁 ALWAYS OPEN CONFIRM MODAL
-                cell.onclick = () => {
+            arr.forEach((paid, i) => {
+                const c = document.createElement('div');
+                c.className = 'week-cell' + (paid ? ' paid' : '');
+                c.innerHTML = `
+            <div class="cell-week">W ${i + 1}</div>
+            <div class="cell-date">${paid ? 'PAID' : weekDate(i)}</div>
+        `;
+                c.onclick = () => {
                     selectedWeekIndex = i;
-                    modalWeekLabel.textContent = `Week ${i + 1}`;
-                    modalText.innerHTML = arr[i]
-                        ? `This week is already <strong>PAID</strong>.<br>Do you want to <strong>cancel this payment</strong>?`
-                        : `Confirm payment for <strong>Week ${i + 1}</strong>?`;
+                    modalText.innerHTML = paid
+                        ? `This week is already <b>PAID</b>.<br>Cancel payment?`
+                        : `Confirm payment for <b>Week ${i + 1}</b>?`;
                     modalOverlay.classList.add('open');
                 };
+                weekGrid.appendChild(c);
+            });
 
-                weekGridEl.appendChild(cell);
-            }
-
-            updateSummary(currentMember);
+            const paidCount = arr.filter(Boolean).length;
+            summaryPaidWeeks.textContent = paidCount;
+            summaryPendingWeeks.textContent = TOTAL_WEEKS - paidCount;
+            summaryPaidAmount.textContent = paidCount * currentMember.amount;
+            summaryPendingAmount.textContent = (TOTAL_WEEKS - paidCount) * currentMember.amount;
         }
 
-        // MODAL
-        btnCancel.onclick = () => {
-            modalOverlay.classList.remove('open');
-            selectedWeekIndex = null;
-        };
+        // ---------- MODAL ----------
+        btnCancel.onclick = () => modalOverlay.classList.remove('open');
 
         btnConfirm.onclick = async () => {
-            if (selectedWeekIndex === null) return;
-
             const arr = normalizePaidWeeks(currentMember.paidWeeks);
-            arr[selectedWeekIndex] = !arr[selectedWeekIndex]; // 🔁 TOGGLE HERE
+            arr[selectedWeekIndex] = !arr[selectedWeekIndex];
 
             try {
-                const id = getMemberIdFromUrl();
-                const updated = await apiUpdateMember(id, { paidWeeks: arr });
+                const updated = await apiUpdate(getMemberId(), { paidWeeks: arr });
                 currentMember.paidWeeks = normalizePaidWeeks(updated.paidWeeks);
-                renderGrid();
-            } catch (e) {
-                alert('Failed to update payment');
-            } finally {
-                modalOverlay.classList.remove('open');
-                selectedWeekIndex = null;
+                render();
+            } catch {
+                alert('Update failed');
             }
+            modalOverlay.classList.remove('open');
         };
 
-        // INIT
-        (async function init() {
-            initWeekDates();
-            const id = getMemberIdFromUrl();
-            if (!id) return alert('Member ID missing');
+        // ---------- INIT ----------
+        (async () => {
+            const id = getMemberId();
+            if (!id) return alert('ID missing');
 
             const m = await apiGetMember(id);
             if (!m) return alert('Member not found');
@@ -625,151 +553,81 @@
             m.paidWeeks = normalizePaidWeeks(m.paidWeeks);
             currentMember = m;
 
-            renderHeader(m);
-            renderGrid();
+            memberName.textContent = m.name;
+            amountChip.textContent = `₹${m.amount} / week`;
+            infoAmount.textContent = `₹${m.amount}`;
+            infoStart.textContent = weekDate(0);
+            avatarCircle.textContent = m.name[0].toUpperCase();
+
+            render();
         })();
 
-        const shareBtn = document.getElementById('shareReceiptBtn');
-
         /* ===============================
-           RECEIPT GENERATION – FINAL
-           =============================== */
+           RECEIPT PDF (FINAL)
+        ================================ */
 
-        function getLastPaidWeekIndex(paidWeeks) {
-            for (let i = paidWeeks.length - 1; i >= 0; i--) {
-                if (paidWeeks[i]) return i;
-            }
-            return null;
-        }
-
-        function getNextPaymentDate(lastPaidIndex) {
-            if (lastPaidIndex === null) return formatDateShort(SCHEME_START);
-            const next = new Date(SCHEME_START);
-            next.setDate(next.getDate() + (lastPaidIndex + 1) * 7);
-            return next.toLocaleDateString();
-        }
-
-        function generateReceiptPDF(member) {
+        function generateReceiptPDF(m) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            const paidArr = normalizePaidWeeks(member.paidWeeks);
-            const paidCount = paidArr.filter(Boolean).length;
-            const lastPaidIndex = getLastPaidWeekIndex(paidArr);
-            const nextPaymentDate = getNextPaymentDate(lastPaidIndex);
+            const arr = normalizePaidWeeks(m.paidWeeks);
+            const paid = arr.filter(Boolean).length;
+            const last = arr.lastIndexOf(true);
+            const next = last >= 0 ? weekDate(last + 1) : weekDate(0);
 
-            const themeColor = [210, 184, 155]; // your palette
-            const textColor = [58, 37, 27];
-
-            /* HEADER */
-            doc.setFillColor(...themeColor);
+            const theme = [210, 184, 155];
+            doc.setFillColor(...theme);
             doc.rect(0, 0, 210, 25, 'F');
 
             doc.setFontSize(16);
-            doc.setTextColor(40, 25, 18);
             doc.text('SSK Chit Funds', 14, 16);
-
-            doc.setFontSize(11);
-            doc.text('PAYMENT RECEIPT', 160, 16);
-
-            doc.setTextColor(...textColor);
-
-            /* RECEIPT INFO */
-            doc.setFontSize(10);
-            doc.text(`Receipt Date: ${new Date().toLocaleDateString()}`, 14, 32);
-            doc.text(`Receipt No: SSK-${Date.now()}`, 150, 32);
-
-            /* MEMBER DETAILS */
-            doc.setFontSize(12);
-            doc.text('Member Details', 14, 42);
+            doc.text('PAYMENT RECEIPT', 150, 16);
 
             doc.setFontSize(10);
+            doc.text(`Receipt No: SSK-${Date.now()}`, 14, 32);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 150, 32);
+
             doc.autoTable({
-                startY: 46,
+                startY: 40,
                 theme: 'grid',
-                styles: { textColor },
-                headStyles: { fillColor: themeColor },
+                headStyles: { fillColor: theme },
                 body: [
-                    ['Member Name', member.name],
-                    ['Weekly Plan', `₹${member.amount}`],
-                    ['Scheme Duration', '52 Weeks'],
-                    ['Status', member.status.toUpperCase()]
+                    ['Member Name', m.name],
+                    ['Weekly Plan', `₹${m.amount}`],
+                    ['Weeks Paid', paid],
+                    ['Total Paid', `₹${paid * m.amount}`],
+                    ['Remaining', `₹${(TOTAL_WEEKS - paid) * m.amount}`],
+                    ['Last Paid Week', last >= 0 ? `Week ${last + 1}` : '—'],
+                    ['Next Payment Date', next]
                 ]
             });
 
-            /* PAYMENT DETAILS */
-            doc.text('Payment Summary', 14, doc.lastAutoTable.finalY + 10);
+            const y = doc.lastAutoTable.finalY + 20;
+            doc.text('Authorized Signature', 14, y);
+            doc.rect(14, y + 5, 60, 20);
+            doc.text('(Signature)', 28, y + 18);
 
-            doc.autoTable({
-                startY: doc.lastAutoTable.finalY + 14,
-                theme: 'grid',
-                styles: { textColor },
-                headStyles: { fillColor: themeColor },
-                body: [
-                    ['Total Weeks Paid', paidCount],
-                    ['Total Amount Paid', `₹${paidCount * member.amount}`],
-                    ['Remaining Weeks', 52 - paidCount],
-                    ['Remaining Amount', `₹${(52 - paidCount) * member.amount}`],
-                    ['Last Paid Week', lastPaidIndex !== null ? `Week ${lastPaidIndex + 1}` : '—'],
-                    ['Next Payment Date', nextPaymentDate]
-                ]
-            });
-
-            /* SIGNATURE SECTION */
-            const signY = doc.lastAutoTable.finalY + 20;
-
-            doc.setFontSize(10);
-            doc.text('Authorized Signature', 14, signY);
-
-            doc.setDrawColor(150);
-            doc.rect(14, signY + 4, 60, 20); // signature placeholder
-            doc.text('(Signature)', 28, signY + 18);
-
-            /* FOOTER */
             doc.setFontSize(9);
-            doc.text(
-                'This is a system-generated receipt. Thank you for your payment.',
-                14,
-                285
-            );
+            doc.text('System generated receipt. Thank you.', 14, 285);
 
             return doc;
         }
 
-        /* ===============================
-           SHARE / DOWNLOAD HANDLER
-           =============================== */
-
-        document.getElementById('shareReceiptBtn').addEventListener('click', async () => {
-            if (!currentMember) return;
-
+        shareReceiptBtn.onclick = async () => {
             const pdf = generateReceiptPDF(currentMember);
             const blob = pdf.output('blob');
+            const file = new File([blob], `Receipt_${currentMember.name}.pdf`, { type: 'application/pdf' });
 
-            const file = new File(
-                [blob],
-                `SSK_Receipt_${currentMember.name}.pdf`,
-                { type: 'application/pdf' }
-            );
-
-            // Mobile share (WhatsApp etc.)
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: 'SSK Chit Payment Receipt',
-                    text: 'Payment receipt from SSK Chit Funds',
-                    files: [file]
-                });
+                await navigator.share({ title: 'Payment Receipt', files: [file] });
             } else {
-                // Desktop fallback
-                pdf.save(`SSK_Receipt_${currentMember.name}.pdf`);
+                pdf.save(file.name);
             }
-        });
-
+        };
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </body>
 
 </html>
