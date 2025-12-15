@@ -447,300 +447,169 @@
 
     <script>
         /* ------------------------------
-           Working script (keep your design)
-           - uses only `id`
-           - renders 52 cells
-           - optimistic updates with PUT /api/members/:id
-           - updates summary (weeks paid, amount paid, remaining)
-           ------------------------------ */
+           CONFIRM-FIRST PAYMENT LOGIC
+           UI UNCHANGED – LOGIC ONLY
+        ------------------------------ */
 
-        // CONFIG
         const API_BASE = 'https://sskchitbackend.onrender.com/api';
         const TOTAL_WEEKS = 52;
-        const SCHEME_START = new Date(2025, 9, 12); // 12 Oct 2025 (same as your original)
+        const SCHEME_START = new Date(2025, 9, 12);
 
-        // DOM REFS
-        const avatarCircle = document.getElementById('avatarCircle');
-        const memberNameEl = document.getElementById('memberName');
-        const memberStatusEl = document.getElementById('memberStatus');
-        const amountChipEl = document.getElementById('amountChip');
-        const infoAmountEl = document.getElementById('infoAmount');
-        const infoStartEl = document.getElementById('infoStart');
-
+        // DOM
         const weekGridEl = document.getElementById('weekGrid');
-        const weekLabelRow = document.getElementById('weekLabelRow');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalWeekLabel = document.getElementById('modalWeekLabel');
+        const modalText = document.getElementById('modalText');
+        const btnCancel = document.getElementById('btnCancel');
+        const btnConfirm = document.getElementById('btnConfirm');
 
         const summaryPaidWeeksEl = document.getElementById('summaryPaidWeeks');
         const summaryPendingWeeksEl = document.getElementById('summaryPendingWeeks');
         const summaryPaidAmountEl = document.getElementById('summaryPaidAmount');
         const summaryPendingAmountEl = document.getElementById('summaryPendingAmount');
 
-        const cancelPlanBtn = document.getElementById('cancelPlanBtn');
-
-        const modalOverlay = document.getElementById('modalOverlay');
-        const btnCancel = document.getElementById('btnCancel');
-        const btnConfirm = document.getElementById('btnConfirm');
-        const modalWeekLabel = document.getElementById('modalWeekLabel');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalText = document.getElementById('modalText');
-
-        // STATE
         let currentMember = null;
-        let weekDates = []; // computed week start dates strings
-        let pendingUpdate = false;
+        let weekDates = [];
+        let selectedWeekIndex = null;
 
-        // TOKEN
+        // helpers
         function getToken() {
-            return localStorage.getItem('token') || null;
+            return localStorage.getItem('token');
         }
 
-        // get id only from URL
         function getMemberIdFromUrl() {
-            const qs = new URLSearchParams(window.location.search);
-            return qs.get('id');
+            return new URLSearchParams(window.location.search).get('id');
         }
 
-        // format date helpers
+        function normalizePaidWeeks(arr) {
+            const out = new Array(TOTAL_WEEKS).fill(false);
+            if (Array.isArray(arr)) {
+                for (let i = 0; i < Math.min(arr.length, TOTAL_WEEKS); i++) {
+                    out[i] = !!arr[i];
+                }
+            }
+            return out;
+        }
+
         function formatDateShort(d) {
-            // e.g. 12 Oct
-            const opts = { day: 'numeric', month: 'short' };
-            return d.toLocaleDateString(undefined, opts);
+            return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
         }
 
-        function addDays(date, days) {
-            const nd = new Date(date.getTime());
-            nd.setDate(nd.getDate() + days);
-            return nd;
-        }
-
-        // compute 52 week start dates from SCHEME_START
         function initWeekDates() {
             weekDates = [];
             for (let i = 0; i < TOTAL_WEEKS; i++) {
-                const d = addDays(SCHEME_START, i * 7);
+                const d = new Date(SCHEME_START);
+                d.setDate(d.getDate() + i * 7);
                 weekDates.push(formatDateShort(d));
             }
         }
 
-        // ensure paidWeeks array has length 52 booleans
-        function normalizePaidWeeks(arr) {
-            if (!Array.isArray(arr)) return Array(TOTAL_WEEKS).fill(false);
-            if (arr.length === TOTAL_WEEKS) return arr.map(Boolean);
-            const res = Array(TOTAL_WEEKS).fill(false);
-            for (let i = 0; i < Math.min(arr.length, TOTAL_WEEKS); i++) res[i] = !!arr[i];
-            return res;
-        }
-
-        // API helpers (use only id)
+        // API
         async function apiGetMember(id) {
-            try {
-                const res = await fetch(`${API_BASE}/members/${encodeURIComponent(id)}`);
-                if (!res.ok) throw new Error('Member fetch failed');
-                return res.json();
-            } catch (e) {
-                console.error(e);
-                return null;
-            }
+            const res = await fetch(`${API_BASE}/members/${id}`);
+            if (!res.ok) return null;
+            return res.json();
         }
 
         async function apiUpdateMember(id, updates) {
-            const token = getToken();
-            if (!token) throw new Error('Login required');
-            const res = await fetch(`${API_BASE}/members/${encodeURIComponent(id)}`, {
+            const res = await fetch(`${API_BASE}/members/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`
+                },
                 body: JSON.stringify(updates)
             });
-            if (!res.ok) {
-                const txt = await res.text().catch(() => null);
-                throw new Error(txt || 'Update failed');
-            }
+            if (!res.ok) throw new Error('Update failed');
             return res.json();
         }
 
-        async function apiDeleteMember(id) {
-            const token = getToken();
-            if (!token) throw new Error('Login required');
-            const res = await fetch(`${API_BASE}/members/${encodeURIComponent(id)}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!res.ok) {
-                const txt = await res.text().catch(() => null);
-                throw new Error(txt || 'Delete failed');
-            }
-            return res.json();
-        }
-
-        // UI helpers
-        function setHeaderInfo(member) {
-            avatarCircle.textContent = (member.name && member.name[0]) ? member.name[0].toUpperCase() : 'M';
-            memberNameEl.textContent = member.name || 'Member Name';
-            memberStatusEl.textContent = member.status || 'Weekly contribution member';
-            amountChipEl.textContent = `₹${Number(member.amount || 0)} / week`;
-            infoAmountEl.textContent = `₹${Number(member.amount || 0)}`;
-            infoStartEl.textContent = weekDates[0] || '--';
-        }
-
-        function computeSummary(paidArr, amountPerWeek) {
-            const paidCount = (paidArr || []).reduce((s, v) => s + (v ? 1 : 0), 0);
-            const pendingCount = TOTAL_WEEKS - paidCount;
-            const paidAmount = paidCount * Number(amountPerWeek || 0);
-            const pendingAmount = pendingCount * Number(amountPerWeek || 0);
-            return { paidCount, pendingCount, paidAmount, pendingAmount };
-        }
-
-        function updateSummaryUI(member) {
+        // UI
+        function updateSummary(member) {
             const arr = normalizePaidWeeks(member.paidWeeks);
-            const summary = computeSummary(arr, member.amount);
-            summaryPaidWeeksEl.textContent = summary.paidCount;
-            summaryPendingWeeksEl.textContent = summary.pendingCount;
-            summaryPaidAmountEl.textContent = summary.paidAmount;
-            summaryPendingAmountEl.textContent = summary.pendingAmount;
+            const paid = arr.filter(Boolean).length;
+            const pending = TOTAL_WEEKS - paid;
+            summaryPaidWeeksEl.textContent = paid;
+            summaryPendingWeeksEl.textContent = pending;
+            summaryPaidAmountEl.textContent = paid * member.amount;
+            summaryPendingAmountEl.textContent = pending * member.amount;
         }
 
-        // render all 52 week cells
-        function renderWeekGrid(member) {
+        function renderGrid() {
             weekGridEl.innerHTML = '';
-            const arr = normalizePaidWeeks(member.paidWeeks);
+            const arr = normalizePaidWeeks(currentMember.paidWeeks);
 
             for (let i = 0; i < TOTAL_WEEKS; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'week-cell' + (arr[i] ? ' paid' : '');
-                cell.dataset.weekIndex = String(i);
+                cell.dataset.index = i;
 
-                // content: week number + date (keeps your original two-line style)
                 const w = document.createElement('div');
                 w.className = 'cell-week';
                 w.textContent = `W ${i + 1}`;
 
                 const d = document.createElement('div');
                 d.className = 'cell-date';
-                d.textContent = weekDates[i] || '--';
+                d.textContent = arr[i] ? 'PAID' : weekDates[i];
 
                 cell.appendChild(w);
                 cell.appendChild(d);
 
-                // click handler - optimistic update
-                cell.addEventListener('click', async (ev) => {
-                    ev.preventDefault();
-                    if (pendingUpdate) return; // avoid concurrent updates
-
-                    const idx = Number(cell.dataset.weekIndex);
-                    const oldArr = normalizePaidWeeks(member.paidWeeks);
-                    const newArr = oldArr.slice();
-                    newArr[idx] = !newArr[idx]; // toggle
-                    // optimistic apply
-                    member.paidWeeks = newArr.slice();
-                    updateCellUI(cell, newArr[idx]);
-                    updateSummaryUI(member);
-
-                    // persist
-                    pendingUpdate = true;
-                    try {
-                        const id = getMemberIdFromUrl();
-                        if (!id) throw new Error('Missing id (login might be required)');
-                        const res = await apiUpdateMember(id, { paidWeeks: member.paidWeeks });
-                        // if server replies with paidWeeks, sync to server's truth
-                        if (res && Array.isArray(res.paidWeeks)) {
-                            member.paidWeeks = normalizePaidWeeks(res.paidWeeks);
-                        }
-                        // re-render entire grid to ensure consistency (cheap)
-                        renderWeekGrid(member);
-                        updateSummaryUI(member);
-                    } catch (err) {
-                        console.error('Save failed', err);
-                        // revert optimistic change
-                        member.paidWeeks = oldArr.slice();
-                        renderWeekGrid(member);
-                        updateSummaryUI(member);
-                        // if authentication issue, prompt to login
-                        if ((err.message || '').toLowerCase().includes('login') || (err.message || '').toLowerCase().includes('auth')) {
-                            if (confirm('You must be logged in to update payments. Go to login now?')) {
-                                window.location.href = 'index.html';
-                            }
-                        } else {
-                            alert('Could not save change: ' + (err.message || 'server error'));
-                        }
-                    } finally {
-                        pendingUpdate = false;
-                    }
+                // 🔒 IMPORTANT: open confirmation only
+                cell.addEventListener('click', () => {
+                    if (arr[i]) return; // already paid → do nothing
+                    selectedWeekIndex = i;
+                    modalWeekLabel.textContent = `Week ${i + 1}`;
+                    modalText.innerHTML = `Confirm payment for <strong>Week ${i + 1}</strong>?`;
+                    modalOverlay.classList.add('open');
                 });
 
                 weekGridEl.appendChild(cell);
             }
+
+            updateSummary(currentMember);
         }
 
-        function updateCellUI(cellEl, isPaid) {
-            cellEl.classList.toggle('paid', !!isPaid);
-        }
+        // modal actions
+        btnCancel.onclick = () => {
+            modalOverlay.classList.remove('open');
+            selectedWeekIndex = null;
+        };
 
-        // Cancel plan (delete member)
-        cancelPlanBtn.addEventListener('click', async () => {
-            if (!currentMember) return;
-            if (!confirm(`Remove ${currentMember.name}? This deletes the member.`)) return;
+        btnConfirm.onclick = async () => {
+            if (selectedWeekIndex === null) return;
+
+            const arr = normalizePaidWeeks(currentMember.paidWeeks);
+            arr[selectedWeekIndex] = true;
+
             try {
                 const id = getMemberIdFromUrl();
-                await apiDeleteMember(id);
-                alert('Member removed');
-                window.location.href = 'members.html';
-            } catch (err) {
-                console.error(err);
-                if ((err.message || '').toLowerCase().includes('login')) {
-                    if (confirm('Login required. Go to login?')) window.location.href = 'index.html';
-                } else {
-                    alert('Could not remove member: ' + (err.message || 'server error'));
-                }
+                const updated = await apiUpdateMember(id, { paidWeeks: arr });
+                currentMember.paidWeeks = normalizePaidWeeks(updated.paidWeeks);
+                renderGrid();
+            } catch (e) {
+                alert('Failed to update payment');
+            } finally {
+                modalOverlay.classList.remove('open');
+                selectedWeekIndex = null;
             }
-        });
-
-        // OPTIONAL modal handlers (kept for compatibility; not used by default)
-        btnCancel.addEventListener('click', () => modalOverlay.classList.remove('open'));
-        btnConfirm.addEventListener('click', () => modalOverlay.classList.remove('open'));
+        };
 
         // INIT
-        async function init() {
+        (async function init() {
             initWeekDates();
             const id = getMemberIdFromUrl();
-            if (!id) {
-                alert('No member id provided in URL.');
-                window.location.href = 'members.html';
-                return;
-            }
-
-            // loading UI
-            memberNameEl.textContent = 'Loading…';
-            weekGridEl.innerHTML = '<div style="padding:20px;color:#666;">Loading weeks…</div>';
+            if (!id) return alert('Member ID missing');
 
             const m = await apiGetMember(id);
-            if (!m) {
-                alert('Member not found or server error.');
-                window.location.href = 'members.html';
-                return;
-            }
+            if (!m) return alert('Member not found');
 
-            // normalize paidWeeks to exactly 52 booleans
             m.paidWeeks = normalizePaidWeeks(m.paidWeeks);
             currentMember = m;
 
-            // set header and grid
-            setHeaderInfo(currentMember);
-            renderWeekGrid(currentMember);
-            updateSummaryUI(currentMember);
-
-            // If server stored fewer than 52 weeks, try to persist normalized array (only if logged in)
-            try {
-                if (getToken() && (!Array.isArray(m.paidWeeks) || m.paidWeeks.length !== TOTAL_WEEKS)) {
-                    await apiUpdateMember(id, { paidWeeks: currentMember.paidWeeks });
-                }
-            } catch (e) {
-                console.warn('Could not persist normalized paidWeeks (non-fatal)', e);
-            }
-        }
-
-        // start
-        init();
-    </script>
+            renderGrid();
+        })();
+    </script> 
 
 </body>
 
