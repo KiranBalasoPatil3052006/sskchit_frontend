@@ -572,122 +572,123 @@
             render();
         })();
 
-        /* ============================
-        RECEIPT + SHARE (WORKING)
-        ============================ */
+        /* =========================
+        SAFE RECEIPT HANDLERS
+        ========================= */
 
         const downloadBtn = document.getElementById('downloadReceiptBtn');
         const shareBtn = document.getElementById('shareReceiptBtn');
         const screenBtn = document.getElementById('screenShareBtn');
 
+        /* ---------- PDF GENERATOR ---------- */
         function generateReceiptPDF(member) {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                alert('PDF library not loaded. Please refresh.');
+                throw new Error('jsPDF missing');
+            }
+
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
             const paidArr = normalizePaidWeeks(member.paidWeeks);
-            const paidWeeks = paidArr.filter(Boolean).length;
-            const lastPaidIndex = paidArr.lastIndexOf(true);
-            const nextPayDate = lastPaidIndex >= 0
-                ? weekDates[lastPaidIndex + 1] || '--'
-                : weekDates[0];
+            const paidCount = paidArr.filter(Boolean).length;
+            const lastPaid = paidArr.lastIndexOf(true);
 
-            const theme = [210, 184, 155];
-            const text = [58, 37, 27];
-
-            /* HEADER */
-            doc.setFillColor(...theme);
-            doc.rect(0, 0, 210, 30, 'F');
-
-            doc.setTextColor(...text);
             doc.setFontSize(16);
-            doc.text('SSK Chit Funds', 14, 18);
+            doc.text('SSK Chit Funds – Payment Receipt', 14, 20);
 
-            doc.setFontSize(9);
-            doc.text('Address: Your Address Here', 14, 24);
-            doc.text('Email: sskchits@gmail.com | Ph: 9XXXXXXXXX', 120, 24);
+            doc.setFontSize(11);
+            doc.text(`Member Name: ${member.name}`, 14, 35);
+            doc.text(`Weekly Plan: ₹${member.amount}`, 14, 43);
+            doc.text(`Weeks Paid: ${paidCount}`, 14, 51);
+            doc.text(`Total Paid: ₹${paidCount * member.amount}`, 14, 59);
+            doc.text(`Last Paid Week: ${lastPaid >= 0 ? 'Week ' + (lastPaid + 1) : '--'}`, 14, 67);
+            doc.text(`Generated (UTC): ${new Date().toUTCString()}`, 14, 80);
 
-            /* RECEIPT META */
-            doc.setFontSize(10);
-            doc.text(`Receipt No: SSK-${Date.now()}`, 14, 40);
-            doc.text(`Generated (UTC): ${new Date().toUTCString()}`, 120, 40);
+            doc.text('Authorized Signature:', 140, 95);
+            doc.rect(140, 98, 50, 20);
 
-            /* TABLE */
-            doc.autoTable({
-                startY: 50,
-                theme: 'grid',
-                headStyles: { fillColor: theme },
-                styles: { textColor: text },
-                body: [
-                    ['Member Name', member.name],
-                    ['Weekly Plan', `₹${member.amount}`],
-                    ['Weeks Paid', paidWeeks],
-                    ['Total Paid', `₹${paidWeeks * member.amount}`],
-                    ['Remaining Amount', `₹${(52 - paidWeeks) * member.amount}`],
-                    ['Last Paid Week', lastPaidIndex >= 0 ? `Week ${lastPaidIndex + 1}` : '--'],
-                    ['Next Payment Date', nextPayDate]
-                ]
-            });
-
-            /* SIGNATURE */
-            const y = doc.lastAutoTable.finalY + 20;
-            doc.text('Authorized Signature', 140, y);
-            doc.rect(140, y + 4, 50, 18);
-
-            /* FOOTER */
             doc.setFontSize(9);
             doc.text('© sskchitfunds2025', 80, 285);
 
             return doc;
         }
 
-        /* DOWNLOAD */
+        /* ---------- DOWNLOAD (ALWAYS WORKS) ---------- */
         downloadBtn.onclick = () => {
-            const pdf = generateReceiptPDF(currentMember);
-            pdf.save(`SSK_Receipt_${currentMember.name}.pdf`);
+            try {
+                const pdf = generateReceiptPDF(currentMember);
+                pdf.save(`SSK_Receipt_${currentMember.name}.pdf`);
+            } catch (e) {
+                console.error(e);
+            }
         };
 
-        /* SHARE PDF (WHATSAPP) */
+        /* ---------- SHARE PDF (WHATSAPP WHEN POSSIBLE) ---------- */
         shareBtn.onclick = async () => {
-            const pdf = generateReceiptPDF(currentMember);
-            const blob = pdf.output('blob');
-            const file = new File([blob], `Receipt_${currentMember.name}.pdf`, {
-                type: 'application/pdf'
-            });
+            try {
+                const pdf = generateReceiptPDF(currentMember);
+                const blob = pdf.output('blob');
 
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: 'SSK Chit Payment Receipt',
-                    files: [file]
-                });
-            } else {
-                pdf.save(file.name);
+                const file = new File(
+                    [blob],
+                    `SSK_Receipt_${currentMember.name}.pdf`,
+                    { type: 'application/pdf' }
+                );
+
+                // ✅ Mobile WhatsApp share
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: 'SSK Chit Payment Receipt',
+                        files: [file]
+                    });
+                } else {
+                    // ❗ Desktop fallback
+                    pdf.save(`SSK_Receipt_${currentMember.name}.pdf`);
+                    alert('WhatsApp sharing works only on mobile. File downloaded instead.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Unable to share. Receipt downloaded instead.');
             }
         };
 
-        /* SCREENSHOT + SHARE */
+        /* ---------- SCREENSHOT + SHARE ---------- */
         screenBtn.onclick = async () => {
-            const target = document.querySelector('.page');
+            if (!window.html2canvas) {
+                alert('Screenshot library not loaded. Refresh page.');
+                return;
+            }
 
-            const canvas = await html2canvas(target, { scale: 2 });
-            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            try {
+                const target = document.querySelector('.page');
+                const canvas = await html2canvas(target, { scale: 2 });
 
-            const file = new File([blob], `SSK_${currentMember.name}_screen.png`, {
-                type: 'image/png'
-            });
+                canvas.toBlob(async (blob) => {
+                    const file = new File(
+                        [blob],
+                        `SSK_${currentMember.name}_screen.png`,
+                        { type: 'image/png' }
+                    );
 
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: 'SSK Chit Payment',
-                    files: [file]
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            title: 'SSK Chit Payment',
+                            files: [file]
+                        });
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = file.name;
+                        a.click();
+                        alert('Screenshot downloaded (WhatsApp sharing is mobile-only).');
+                    }
                 });
-            } else {
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = file.name;
-                a.click();
+            } catch (e) {
+                console.error(e);
+                alert('Screenshot failed.');
             }
         };
-
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
