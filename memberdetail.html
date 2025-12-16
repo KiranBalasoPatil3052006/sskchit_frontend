@@ -575,92 +575,120 @@
         /* =========================
         SAFE RECEIPT HANDLERS
         ========================= */
+
+        const downloadBtn = document.getElementById('downloadReceiptBtn');
+        const shareBtn = document.getElementById('shareReceiptBtn');
+        const screenBtn = document.getElementById('screenShareBtn');
+
+        /* ---------- PDF GENERATOR ---------- */
         function generateReceiptPDF(member) {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                alert('PDF library not loaded. Please refresh.');
+                throw new Error('jsPDF missing');
+            }
+
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            const PRIMARY = '#3a251b';
-            const ACCENT = '#d2b89b';
-
             const paidArr = normalizePaidWeeks(member.paidWeeks);
-            const paidWeeks = paidArr.filter(Boolean).length;
-            const pendingWeeks = 52 - paidWeeks;
-            const totalPaid = paidWeeks * member.amount;
-            const remaining = pendingWeeks * member.amount;
-            const lastPaidWeek = paidArr.lastIndexOf(true) + 1;
-            const receiptNo = 'SSK-' + Date.now();
-            const generatedUTC = new Date().toUTCString();
+            const paidCount = paidArr.filter(Boolean).length;
+            const lastPaid = paidArr.lastIndexOf(true);
 
-            /* ---------- HEADER ---------- */
-            doc.setFillColor(210, 184, 155);
-            doc.rect(0, 0, 210, 28, 'F');
-
-            doc.addImage('images/ssk-logo.png', 'PNG', 14, 6, 18, 18);
-
-            doc.setTextColor(PRIMARY);
             doc.setFontSize(16);
-            doc.text('SSK Chit Funds', 40, 14);
+            doc.text('SSK Chit Funds – Payment Receipt', 14, 20);
+
+            doc.setFontSize(11);
+            doc.text(`Member Name: ${member.name}`, 14, 35);
+            doc.text(`Weekly Plan: ₹${member.amount}`, 14, 43);
+            doc.text(`Weeks Paid: ${paidCount}`, 14, 51);
+            doc.text(`Total Paid: ₹${paidCount * member.amount}`, 14, 59);
+            doc.text(`Last Paid Week: ${lastPaid >= 0 ? 'Week ' + (lastPaid + 1) : '--'}`, 14, 67);
+            doc.text(`Generated (UTC): ${new Date().toUTCString()}`, 14, 80);
+
+            doc.text('Authorized Signature:', 140, 95);
+            doc.rect(140, 98, 50, 20);
 
             doc.setFontSize(9);
-            doc.text('No.12, Sample Street, Chennai - 600001', 40, 19);
-            doc.text('Email: sskchits@gmail.com | Contact: +91 98765 43210', 40, 24);
-
-            /* ---------- META ---------- */
-            doc.setFontSize(10);
-            doc.text(`Receipt No: ${receiptNo}`, 14, 38);
-            doc.text(`Date (UTC): ${generatedUTC}`, 130, 38);
-
-            /* ---------- MEMBER DETAILS ---------- */
-            doc.setFontSize(12);
-            doc.setTextColor(PRIMARY);
-            doc.text('Member Details', 14, 48);
-
-            doc.autoTable({
-                startY: 52,
-                theme: 'grid',
-                headStyles: { fillColor: [210, 184, 155] },
-                styles: { textColor: [58, 37, 27] },
-                head: [['Field', 'Value']],
-                body: [
-                    ['Member Name', member.name],
-                    ['Weekly Plan', `₹${member.amount}`],
-                    ['Status', member.status],
-                    ['Weeks Paid', paidWeeks],
-                    ['Weeks Pending', pendingWeeks]
-                ]
-            });
-
-            /* ---------- PAYMENT DETAILS ---------- */
-            const nextY = doc.lastAutoTable.finalY + 8;
-            doc.text('Payment Details', 14, nextY);
-
-            doc.autoTable({
-                startY: nextY + 4,
-                theme: 'grid',
-                headStyles: { fillColor: [210, 184, 155] },
-                styles: { textColor: [58, 37, 27] },
-                head: [['Description', 'Amount']],
-                body: [
-                    ['Weekly Amount', `₹${member.amount}`],
-                    ['Total Paid', `₹${totalPaid}`],
-                    ['Remaining Amount', `₹${remaining}`],
-                    ['Last Paid Week', lastPaidWeek ? `Week ${lastPaidWeek}` : '--'],
-                    ['Next Payment Date', pendingWeeks ? 'Next scheduled week' : 'Completed']
-                ]
-            });
-
-            /* ---------- SIGNATURE ---------- */
-            const signY = doc.lastAutoTable.finalY + 18;
-            doc.text('Authorized Signature', 140, signY - 4);
-            doc.addImage('images/sign.png', 'PNG', 140, signY, 40, 18);
-
-            /* ---------- FOOTER ---------- */
-            doc.setFontSize(9);
-            doc.setTextColor(120);
-            doc.text('© sskchitfunds2025', 80, 290);
+            doc.text('© sskchitfunds2025', 80, 285);
 
             return doc;
         }
+
+        /* ---------- DOWNLOAD (ALWAYS WORKS) ---------- */
+        downloadBtn.onclick = () => {
+            try {
+                const pdf = generateReceiptPDF(currentMember);
+                pdf.save(`SSK_Receipt_${currentMember.name}.pdf`);
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        /* ---------- SHARE PDF (WHATSAPP WHEN POSSIBLE) ---------- */
+        shareBtn.onclick = async () => {
+            try {
+                const pdf = generateReceiptPDF(currentMember);
+                const blob = pdf.output('blob');
+
+                const file = new File(
+                    [blob],
+                    `SSK_Receipt_${currentMember.name}.pdf`,
+                    { type: 'application/pdf' }
+                );
+
+                // ✅ Mobile WhatsApp share
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: 'SSK Chit Payment Receipt',
+                        files: [file]
+                    });
+                } else {
+                    // ❗ Desktop fallback
+                    pdf.save(`SSK_Receipt_${currentMember.name}.pdf`);
+                    alert('WhatsApp sharing works only on mobile. File downloaded instead.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Unable to share. Receipt downloaded instead.');
+            }
+        };
+
+        /* ---------- SCREENSHOT + SHARE ---------- */
+        screenBtn.onclick = async () => {
+            if (!window.html2canvas) {
+                alert('Screenshot library not loaded. Refresh page.');
+                return;
+            }
+
+            try {
+                const target = document.querySelector('.page');
+                const canvas = await html2canvas(target, { scale: 2 });
+
+                canvas.toBlob(async (blob) => {
+                    const file = new File(
+                        [blob],
+                        `SSK_${currentMember.name}_screen.png`,
+                        { type: 'image/png' }
+                    );
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            title: 'SSK Chit Payment',
+                            files: [file]
+                        });
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = file.name;
+                        a.click();
+                        alert('Screenshot downloaded (WhatsApp sharing is mobile-only).');
+                    }
+                });
+            } catch (e) {
+                console.error(e);
+                alert('Screenshot failed.');
+            }
+        };
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
