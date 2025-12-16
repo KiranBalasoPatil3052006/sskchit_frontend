@@ -461,169 +461,199 @@
 
     <script>
         /* ===============================
-           CONFIRM-BASED PAYMENT LOGIC
+           MEMBER DETAIL – FINAL SCRIPT
+           Receipt + Download + WhatsApp
         ================================ */
 
         const API_BASE = 'https://sskchitbackend.onrender.com/api';
         const TOTAL_WEEKS = 52;
         const SCHEME_START = new Date(2025, 9, 12);
 
-        // ---------- STATE ----------
+        // DOM
+        const avatarCircle = document.getElementById('avatarCircle');
+        const memberNameEl = document.getElementById('memberName');
+        const memberStatusEl = document.getElementById('memberStatus');
+        const amountChipEl = document.getElementById('amountChip');
+        const infoAmountEl = document.getElementById('infoAmount');
+        const infoStartEl = document.getElementById('infoStart');
+        const weekGridEl = document.getElementById('weekGrid');
+
+        const summaryPaidWeeksEl = document.getElementById('summaryPaidWeeks');
+        const summaryPendingWeeksEl = document.getElementById('summaryPendingWeeks');
+        const summaryPaidAmountEl = document.getElementById('summaryPaidAmount');
+        const summaryPendingAmountEl = document.getElementById('summaryPendingAmount');
+
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalWeekLabel = document.getElementById('modalWeekLabel');
+        const modalText = document.getElementById('modalText');
+        const btnCancel = document.getElementById('btnCancel');
+        const btnConfirm = document.getElementById('btnConfirm');
+
+        const downloadBtn = document.getElementById('downloadReceiptBtn');
+        const shareBtn = document.getElementById('shareReceiptBtn');
+
         let currentMember = null;
+        let weekDates = [];
         let selectedWeekIndex = null;
 
         // ---------- HELPERS ----------
         const getToken = () => localStorage.getItem('token');
-        const getMemberId = () => new URLSearchParams(location.search).get('id');
+        const getMemberId = () => new URLSearchParams(window.location.search).get('id');
 
-        const normalizePaidWeeks = (arr = []) => {
-            const out = Array(TOTAL_WEEKS).fill(false);
-            arr.forEach((v, i) => out[i] = !!v);
+        function normalizePaidWeeks(arr) {
+            const out = new Array(TOTAL_WEEKS).fill(false);
+            if (Array.isArray(arr)) {
+                for (let i = 0; i < Math.min(arr.length, TOTAL_WEEKS); i++) {
+                    out[i] = !!arr[i];
+                }
+            }
             return out;
-        };
+        }
 
-        const weekDate = i => {
-            const d = new Date(SCHEME_START);
-            d.setDate(d.getDate() + i * 7);
+        function formatDateShort(d) {
             return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-        };
+        }
+
+        function initWeekDates() {
+            weekDates = [];
+            for (let i = 0; i < TOTAL_WEEKS; i++) {
+                const d = new Date(SCHEME_START);
+                d.setDate(d.getDate() + i * 7);
+                weekDates.push(formatDateShort(d));
+            }
+        }
 
         // ---------- API ----------
         async function apiGetMember(id) {
-            const r = await fetch(`${API_BASE}/members/${id}`);
-            return r.ok ? r.json() : null;
+            const res = await fetch(`${API_BASE}/members/${id}`);
+            return res.ok ? res.json() : null;
         }
-        async function apiUpdate(id, data) {
-            const r = await fetch(`${API_BASE}/members/${id}`, {
+
+        async function apiUpdateMember(id, updates) {
+            const res = await fetch(`${API_BASE}/members/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${getToken()}`
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify(updates)
             });
-            if (!r.ok) throw new Error();
-            return r.json();
+            if (!res.ok) throw new Error('Update failed');
+            return res.json();
         }
 
         // ---------- UI ----------
-        function render() {
+        function renderHeader(m) {
+            avatarCircle.textContent = m.name?.[0]?.toUpperCase() || 'M';
+            memberNameEl.textContent = m.name;
+            memberStatusEl.textContent = m.status || 'Active Member';
+            amountChipEl.textContent = `₹${m.amount} / week`;
+            infoAmountEl.textContent = `₹${m.amount}`;
+            infoStartEl.textContent = weekDates[0];
+        }
+
+        function updateSummary(m) {
+            const arr = normalizePaidWeeks(m.paidWeeks);
+            const paid = arr.filter(Boolean).length;
+            const pending = TOTAL_WEEKS - paid;
+
+            summaryPaidWeeksEl.textContent = paid;
+            summaryPendingWeeksEl.textContent = pending;
+            summaryPaidAmountEl.textContent = paid * m.amount;
+            summaryPendingAmountEl.textContent = pending * m.amount;
+        }
+
+        function renderGrid() {
+            weekGridEl.innerHTML = '';
             const arr = normalizePaidWeeks(currentMember.paidWeeks);
-            weekGrid.innerHTML = '';
 
             arr.forEach((paid, i) => {
-                const c = document.createElement('div');
-                c.className = 'week-cell' + (paid ? ' paid' : '');
-                c.innerHTML = `
-            <div class="cell-week">W ${i + 1}</div>
-            <div class="cell-date">${paid ? 'PAID' : weekDate(i)}</div>
-        `;
-                c.onclick = () => {
+                const cell = document.createElement('div');
+                cell.className = 'week-cell' + (paid ? ' paid' : '');
+
+                const w = document.createElement('div');
+                w.className = 'cell-week';
+                w.textContent = `W ${i + 1}`;
+
+                const d = document.createElement('div');
+                d.className = 'cell-date';
+                d.textContent = paid ? 'PAID' : weekDates[i];
+
+                cell.append(w, d);
+
+                cell.onclick = () => {
                     selectedWeekIndex = i;
+                    modalWeekLabel.textContent = `Week ${i + 1}`;
                     modalText.innerHTML = paid
-                        ? `This week is already <b>PAID</b>.<br>Cancel payment?`
-                        : `Confirm payment for <b>Week ${i + 1}</b>?`;
+                        ? `Cancel payment for <strong>Week ${i + 1}</strong>?`
+                        : `Confirm payment for <strong>Week ${i + 1}</strong>?`;
                     modalOverlay.classList.add('open');
                 };
-                weekGrid.appendChild(c);
+
+                weekGridEl.appendChild(cell);
             });
 
-            const paidCount = arr.filter(Boolean).length;
-            summaryPaidWeeks.textContent = paidCount;
-            summaryPendingWeeks.textContent = TOTAL_WEEKS - paidCount;
-            summaryPaidAmount.textContent = paidCount * currentMember.amount;
-            summaryPendingAmount.textContent = (TOTAL_WEEKS - paidCount) * currentMember.amount;
+            updateSummary(currentMember);
         }
 
         // ---------- MODAL ----------
-        btnCancel.onclick = () => modalOverlay.classList.remove('open');
+        btnCancel.onclick = () => {
+            modalOverlay.classList.remove('open');
+            selectedWeekIndex = null;
+        };
 
         btnConfirm.onclick = async () => {
+            if (selectedWeekIndex === null) return;
+
             const arr = normalizePaidWeeks(currentMember.paidWeeks);
             arr[selectedWeekIndex] = !arr[selectedWeekIndex];
 
             try {
-                const updated = await apiUpdate(getMemberId(), { paidWeeks: arr });
+                const updated = await apiUpdateMember(getMemberId(), { paidWeeks: arr });
                 currentMember.paidWeeks = normalizePaidWeeks(updated.paidWeeks);
-                render();
+                renderGrid();
             } catch {
-                alert('Update failed');
+                alert('Payment update failed');
             }
+
             modalOverlay.classList.remove('open');
+            selectedWeekIndex = null;
         };
 
-        // ---------- INIT ----------
-        (async () => {
-            const id = getMemberId();
-            if (!id) return alert('ID missing');
-
-            const m = await apiGetMember(id);
-            if (!m) return alert('Member not found');
-
-            m.paidWeeks = normalizePaidWeeks(m.paidWeeks);
-            currentMember = m;
-
-            memberName.textContent = m.name;
-            amountChip.textContent = `₹${m.amount} / week`;
-            infoAmount.textContent = `₹${m.amount}`;
-            infoStart.textContent = weekDate(0);
-            avatarCircle.textContent = m.name[0].toUpperCase();
-
-            render();
-        })();
-
-        /* =========================
-        SAFE RECEIPT HANDLERS
-        ========================= */
-
-        const downloadBtn = document.getElementById('downloadReceiptBtn');
-        const shareBtn = document.getElementById('shareReceiptBtn');
-        const screenBtn = document.getElementById('screenShareBtn');
-
-        /* ---------- PDF GENERATOR ---------- */
+        // ---------- RECEIPT PDF ----------
         function generateReceiptPDF(member) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-
             const PRIMARY = '#3a251b';
             const ACCENT = '#d2b89b';
 
             const paidArr = normalizePaidWeeks(member.paidWeeks);
             const paidCount = paidArr.filter(Boolean).length;
             const pendingCount = TOTAL_WEEKS - paidCount;
-            const lastPaidIndex = paidArr.lastIndexOf(true);
-            const nextPaymentWeek = lastPaidIndex + 2 <= TOTAL_WEEKS ? `Week ${lastPaidIndex + 2}` : 'Completed';
+            const lastPaid = paidArr.lastIndexOf(true);
 
-            const receiptNo = `SSK-${Date.now()}`;
-            const generatedUTC = new Date().toUTCString();
-
-            // ---------- HEADER ----------
             doc.setFillColor(245, 239, 230);
             doc.rect(0, 0, 210, 40, 'F');
 
-            doc.addImage('images/ssk-logo.png', 'PNG', 14, 10, 25, 25);
-
+            doc.addImage('images/ssk-logo.png', 'PNG', 14, 10, 24, 24);
             doc.setFontSize(16);
             doc.setTextColor(PRIMARY);
             doc.text('SSK Chit Funds', 45, 18);
 
             doc.setFontSize(10);
-            doc.text('123, Main Road, City Name, Tamil Nadu', 45, 24);
-            doc.text('sskchitfunds@gmail.com | +91 98765 43210', 45, 30);
+            doc.text('123 Main Road, City, Tamil Nadu', 45, 25);
+            doc.text('sskchitfunds@gmail.com | +91 98765 43210', 45, 31);
 
-            // ---------- META ----------
-            doc.setFontSize(10);
-            doc.text(`Receipt No: ${receiptNo}`, 14, 46);
-            doc.text(`Generated (UTC): ${generatedUTC}`, 130, 46);
+            doc.text(`Receipt No: SSK-${Date.now()}`, 14, 46);
+            doc.text(`Generated (UTC): ${new Date().toUTCString()}`, 130, 46);
 
-            // ---------- MEMBER DETAILS TABLE ----------
             doc.autoTable({
                 startY: 52,
                 head: [['Member Details', '']],
                 body: [
                     ['Name', member.name],
                     ['Plan', `₹${member.amount} / week`],
-                    ['Status', member.status || 'Active'],
+                    ['Status', member.status],
                     ['Weeks Paid', paidCount],
                     ['Weeks Pending', pendingCount]
                 ],
@@ -632,36 +662,68 @@
                 styles: { textColor: PRIMARY }
             });
 
-            // ---------- PAYMENT DETAILS TABLE ----------
             doc.autoTable({
                 startY: doc.lastAutoTable.finalY + 8,
                 head: [['Payment Details', '']],
                 body: [
                     ['Weekly Amount', `₹${member.amount}`],
                     ['Total Paid', `₹${paidCount * member.amount}`],
-                    ['Remaining Amount', `₹${pendingCount * member.amount}`],
-                    ['Last Paid Week', lastPaidIndex >= 0 ? `Week ${lastPaidIndex + 1}` : '--'],
-                    ['Next Payment Date', nextPaymentWeek]
+                    ['Remaining', `₹${pendingCount * member.amount}`],
+                    ['Last Paid Week', lastPaid >= 0 ? `Week ${lastPaid + 1}` : '--'],
+                    ['Next Payment', lastPaid + 2 <= TOTAL_WEEKS ? `Week ${lastPaid + 2}` : 'Completed']
                 ],
                 theme: 'grid',
                 headStyles: { fillColor: ACCENT, textColor: PRIMARY },
                 styles: { textColor: PRIMARY }
             });
 
-            // ---------- SIGNATURE ----------
-            const signY = doc.lastAutoTable.finalY + 20;
-            doc.addImage('images/sign.png', 'PNG', 140, signY, 40, 20);
-            doc.setFontSize(9);
-            doc.text('Authorized Signature', 145, signY + 25);
+            const y = doc.lastAutoTable.finalY + 20;
+            doc.addImage('images/sign.png', 'PNG', 140, y, 40, 18);
+            doc.text('Authorized Signature', 145, y + 24);
 
-            // ---------- FOOTER ----------
-            doc.setFontSize(9);
-            doc.setTextColor(PRIMARY);
             doc.text('© sskchitfunds2025', 80, 290);
-
             return doc;
         }
+
+        // ---------- BUTTONS ----------
+        downloadBtn.onclick = () => {
+            if (!currentMember) return;
+            generateReceiptPDF(currentMember).save(`Receipt_${currentMember.name}.pdf`);
+        };
+
+        shareBtn.onclick = async () => {
+            const pdf = generateReceiptPDF(currentMember);
+            const blob = pdf.output('blob');
+            const file = new File([blob], `Receipt_${currentMember.name}.pdf`, { type: 'application/pdf' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'Payment Receipt',
+                    text: 'SSK Chit Funds Receipt',
+                    files: [file]
+                });
+            } else {
+                pdf.save(`Receipt_${currentMember.name}.pdf`);
+            }
+        };
+
+        // ---------- INIT ----------
+        (async function init() {
+            initWeekDates();
+            const id = getMemberId();
+            if (!id) return alert('Member ID missing');
+
+            const m = await apiGetMember(id);
+            if (!m) return alert('Member not found');
+
+            m.paidWeeks = normalizePaidWeeks(m.paidWeeks);
+            currentMember = m;
+
+            renderHeader(m);
+            renderGrid();
+        })();
     </script>
+
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
